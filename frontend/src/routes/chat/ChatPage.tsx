@@ -20,6 +20,25 @@ export default function ChatPage() {
   const { messages, workdir, addMessage, setWorkdir } = useChatStore();
   const { wsStatus, loading, setLoading, handleSend, handleSetWorkdir, handleReconnect } = useChatWs();
   const [input, setInput] = useState("");
+
+  function onNavigate(path: string) {
+    const text = `列出 ${path} 的内容`;
+    setInput(text);
+    // Auto-send after short delay for better UX
+    setTimeout(() => {
+      if (!loading) {
+        setInput("");
+        addMessage({
+          id: crypto.randomUUID(),
+          role: "user",
+          blocks: [{ id: crypto.randomUUID(), type: "text", content: text, collapsed: false }],
+        });
+        addMessage({ id: crypto.randomUUID(), role: "assistant", blocks: [] });
+        setLoading(true);
+        handleSend(text);
+      }
+    }, 100);
+  }
   const [editingWorkdir, setEditingWorkdir] = useState(false);
   const [workdirInput, setWorkdirInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -133,7 +152,7 @@ export default function ChatPage() {
                 style={{ maxWidth: msg.role === "user" ? "70%" : "85%" }}
               >
                 {msg.role === "assistant" ? (
-                  msg.blocks.length === 0 ? <Spin size="small" /> : msg.blocks.map((b) => <BlockView key={b.id} block={b} />)
+                  msg.blocks.length === 0 ? <Spin size="small" /> :                   msg.blocks.map((b) => <BlockView key={b.id} block={b} onNavigate={onNavigate} />)
                 ) : (
                   <span className="whitespace-pre-wrap">{msg.blocks.find((b) => b.type === "text")?.content || ""}</span>
                 )}
