@@ -1,4 +1,11 @@
+from pathlib import Path
 from uuid import uuid4
+
+_docs = Path(__file__).parent / "docs"
+
+_WORKDIR_SET = (_docs / "workdir-set.md").read_text(encoding="utf-8").strip()
+_WORKDIR_UNSET = (_docs / "workdir-unset.md").read_text(encoding="utf-8").strip()
+_TAIL = (_docs / "tail.md").read_text(encoding="utf-8").strip()
 
 MAX_TURNS_DEFAULT = 30
 
@@ -24,16 +31,12 @@ class ConversationContext:
         return list(self._messages)
 
     def build_messages(self) -> list[dict]:
-        """
-        构建发送给 LLM 的消息列表。
-        动态上下文（工作目录）追加到末尾，避免破坏静态 prompt 前缀的 KV 缓存。
-        """
         history = self.get_history()
         if self.workdir:
-            msg = f"当前工作目录为 {self.workdir}，文件操作应在此目录范围内，除非用户明确指定其他路径。"
+            body = _WORKDIR_SET.format(workdir=self.workdir)
         else:
-            msg = "当前未设置工作目录。禁止调用文件/目录相关的工具，必须先用文字询问用户是否要设置工作目录。"
-        history = history + [{"role": "system", "content": msg}]
+            body = _WORKDIR_UNSET
+        history = history + [{"role": "system", "content": f"{body}；{_TAIL}"}]
         return history
 
     @property
