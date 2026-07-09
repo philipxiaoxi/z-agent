@@ -1,21 +1,16 @@
-import { useEffect, useState } from "react";
-import { api } from "./services/api";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ConfigProvider } from "antd";
+import ChatPage from "./routes/chat/ChatPage";
 
-function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    api.get("/system/health").then((res) => {
-      setMessage(res.data.status);
-    });
-  }, []);
-
+export default function App() {
   return (
-    <div className="app">
-      <h1>zspace-agent</h1>
-      <p>backend status: {message || "connecting..."}</p>
-    </div>
+    <ConfigProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Navigate to="/chat" replace />} />
+          <Route path="/chat" element={<ChatPage />} />
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
   );
 }
-
-export default App;

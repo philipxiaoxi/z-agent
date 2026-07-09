@@ -1,0 +1,120 @@
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? "localhost:8000";
+const WS_BASE = RAW_BASE.replace(/^https?:\/\//, "");
+
+export interface ToolCallEvent {
+  id: string;
+  tool: string;
+  args: Record<string, unknown>;
+}
+
+export interface RequireConfirmEvent extends ToolCallEvent {
+  question: string;
+}
+
+export interface ToolResultEvent {
+  id: string;
+  tool: string;
+  result: string;
+}
+
+export type WsStatus = "connecting" | "connected" | "disconnected";
+
+export interface WsEvents {
+  onStatusChange: (status: WsStatus) => void;
+  onText: (content: string) => void;
+  onToolStart: (data: ToolCallEvent) => void;
+  onToolResult: (data: ToolResultEvent) => void;
+  onRequireConfirm: (data: RequireConfirmEvent) => void;
+  onDone: () => void;
+  onError: (content: string) => void;
+}
+
+export interface ChatWs {
+  sendMessage: (text: string) => void;
+  sendConfirm: (id: string, approved: boolean) => void;
+  reconnect: () => void;
+  close: () => void;
+}
+
+type ServerEvent =
+  | { type: "text"; content: string }
+  | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
+  | { type: "tool_result"; id: string; tool: string; result: string }
+  | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string }
+  | { type: "done" }
+  | { type: "error"; content: string };
+
+export function createChatWs(events: WsEvents): ChatWs {
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const url = `${protocol}//${WS_BASE}/api/agent/ws`;
+  let ws: WebSocket;
+
+  function connect() {
+    ws = new WebSocket(url);
+    events.onStatusChange("connecting");
+
+    ws.onopen = () => {
+      events.onStatusChange("connected");
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as ServerEvent;
+        switch (data.type) {
+          case "text":
+            events.onText(data.content);
+            break;
+          case "tool_start":
+            events.onToolStart({ id: data.id, tool: data.tool, args: data.args });
+            break;
+          case "tool_result":
+            events.onToolResult({ id: data.id, tool: data.tool, result: data.result });
+            break;
+          case "require_confirm":
+            events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question });
+            break;
+          case "done":
+            events.onDone();
+            break;
+          case "error":
+            events.onError(data.content);
+            break;
+        }
+      } catch {
+        // ignore non-JSON messages
+      }
+    };
+
+    ws.onerror = () => {
+      events.onStatusChange("disconnected");
+      events.onError("WebSocket 连接失败");
+    };
+
+    ws.onclose = () => {
+      events.onStatusChange("disconnected");
+      events.onDone();
+    };
+  }
+
+  connect();
+
+  return {
+    sendMessage(text: string) {
+      if (ws.readyState !== WebSocket.OPEN) {
+        events.onError("WebSocket 未连接");
+        return;
+      }
+      ws.send(JSON.stringify({ type: "message", content: text }));
+    },
+    sendConfirm(id: string, approved: boolean) {
+      ws.send(JSON.stringify({ type: "confirm", id, approved }));
+    },
+    reconnect() {
+      ws.close();
+      connect();
+    },
+    close() {
+      ws.close();
+    },
+  };
+}
