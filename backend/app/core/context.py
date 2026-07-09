@@ -8,6 +8,7 @@ class ConversationContext:
 
     def __init__(self, max_turns: int = MAX_TURNS_DEFAULT) -> None:
         self.session_id: str = uuid4().hex[:12]
+        self.workdir: str = ""
         self._messages: list[dict] = []
         self._max_turns = max_turns
 
@@ -21,6 +22,19 @@ class ConversationContext:
 
     def get_history(self) -> list[dict]:
         return list(self._messages)
+
+    def build_messages(self) -> list[dict]:
+        """
+        构建发送给 LLM 的消息列表。
+        动态上下文（工作目录）追加到末尾，避免破坏静态 prompt 前缀的 KV 缓存。
+        """
+        history = self.get_history()
+        if self.workdir:
+            msg = f"当前工作目录为 {self.workdir}，文件操作应在此目录范围内，除非用户明确指定其他路径。"
+        else:
+            msg = "当前未设置工作目录。禁止调用文件/目录相关的工具，必须先用文字询问用户是否要设置工作目录。"
+        history = history + [{"role": "system", "content": msg}]
+        return history
 
     @property
     def turn_count(self) -> int:

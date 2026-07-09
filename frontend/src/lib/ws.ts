@@ -9,6 +9,9 @@ export interface ToolCallEvent {
 
 export interface RequireConfirmEvent extends ToolCallEvent {
   question: string;
+  confirm_type?: string;
+  path?: string;
+  workdir?: string;
 }
 
 export interface ToolResultEvent {
@@ -25,6 +28,7 @@ export interface WsEvents {
   onToolStart: (data: ToolCallEvent) => void;
   onToolResult: (data: ToolResultEvent) => void;
   onRequireConfirm: (data: RequireConfirmEvent) => void;
+  onWorkdirChanged: (path: string) => void;
   onDone: () => void;
   onError: (content: string) => void;
 }
@@ -32,6 +36,7 @@ export interface WsEvents {
 export interface ChatWs {
   sendMessage: (text: string) => void;
   sendConfirm: (id: string, approved: boolean) => void;
+  sendSetWorkdir: (path: string) => void;
   reconnect: () => void;
   close: () => void;
 }
@@ -40,7 +45,8 @@ type ServerEvent =
   | { type: "text"; content: string }
   | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
   | { type: "tool_result"; id: string; tool: string; result: string }
-  | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string }
+  | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string; confirm_type?: string; path?: string; workdir?: string }
+  | { type: "workdir_changed"; path: string }
   | { type: "done" }
   | { type: "error"; content: string };
 
@@ -83,7 +89,10 @@ export function createChatWs(events: WsEvents): ChatWs {
             events.onToolResult({ id: data.id, tool: data.tool, result: data.result });
             break;
           case "require_confirm":
-            events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question });
+            events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question, confirm_type: data.confirm_type, path: data.path, workdir: data.workdir });
+            break;
+          case "workdir_changed":
+            events.onWorkdirChanged(data.path);
             break;
           case "done":
             events.onDone();
@@ -120,6 +129,9 @@ export function createChatWs(events: WsEvents): ChatWs {
     },
     sendConfirm(id: string, approved: boolean) {
       ws.send(JSON.stringify({ type: "confirm", id, approved }));
+    },
+    sendSetWorkdir(path: string) {
+      ws.send(JSON.stringify({ type: "set_workdir", path }));
     },
     reconnect() {
       safeClose();

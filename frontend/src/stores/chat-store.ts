@@ -20,11 +20,13 @@ export interface Message {
 
 interface ChatState {
   messages: Message[];
+  workdir: string;
   addMessage: (msg: Message) => void;
   appendText: (chunk: string) => void;
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
   toggleBlockCollapsed: (blockId: string) => void;
+  setWorkdir: (path: string) => void;
   clear: () => void;
 }
 
@@ -41,6 +43,7 @@ function withNewBlock(s: ChatState, block: Block): Partial<ChatState> {
 
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
+  workdir: "",
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
 
@@ -103,5 +106,7 @@ export const useChatStore = create<ChatState>((set) => ({
       })),
     })),
 
-  clear: () => set({ messages: [] }),
+  setWorkdir: (path) => set({ workdir: path }),
+
+  clear: () => set({ messages: [], workdir: "" }),
 }));

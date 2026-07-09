@@ -5,6 +5,8 @@ import {
   ThunderboltOutlined,
   UserOutlined,
   ReloadOutlined,
+  FolderOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import { useChatStore } from "../../stores/chat-store";
 import BlockView, { STATUS_META, type StatusKey } from "../../components/chat/BlockView";
@@ -15,9 +17,11 @@ const { Text } = Typography;
 const CHAT_MAX_WIDTH = 720;
 
 export default function ChatPage() {
-  const { messages, addMessage } = useChatStore();
-  const { wsStatus, loading, setLoading, handleSend, handleReconnect } = useChatWs();
+  const { messages, workdir, addMessage, setWorkdir } = useChatStore();
+  const { wsStatus, loading, setLoading, handleSend, handleSetWorkdir, handleReconnect } = useChatWs();
   const [input, setInput] = useState("");
+  const [editingWorkdir, setEditingWorkdir] = useState(false);
+  const [workdirInput, setWorkdirInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => {
     const len = messages.length;
@@ -52,6 +56,35 @@ export default function ChatPage() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       onSend();
+    }
+  }
+
+  function startEditWorkdir() {
+    setWorkdirInput(workdir);
+    setEditingWorkdir(true);
+  }
+
+  function confirmWorkdir() {
+    const path = workdirInput.trim();
+    if (path) {
+      setWorkdir(path);
+      handleSetWorkdir(path);
+    }
+    setEditingWorkdir(false);
+  }
+
+  function clearWorkdir() {
+    setWorkdir("");
+    handleSetWorkdir("");
+    setEditingWorkdir(false);
+  }
+
+  function onWorkdirKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmWorkdir();
+    } else if (e.key === "Escape") {
+      setEditingWorkdir(false);
     }
   }
 
@@ -117,19 +150,52 @@ export default function ChatPage() {
       </div>
 
       <div className="px-4 py-3 bg-white border-t border-gray-100 shrink-0">
-        <div className="flex gap-2 mx-auto items-end" style={{ maxWidth: CHAT_MAX_WIDTH }}>
-          <Input.TextArea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="输入消息，Enter 发送，Shift+Enter 换行"
-            autoSize={{ minRows: 1, maxRows: 4 }}
-            disabled={loading}
-            className="rounded-[10px] text-sm px-3 py-2"
-          />
-          <Button type="primary" icon={<SendOutlined />} onClick={onSend} loading={loading} className="rounded-[10px] h-[38px] px-[18px] flex items-center">
-            发送
-          </Button>
+        <div style={{ maxWidth: CHAT_MAX_WIDTH }} className="mx-auto">
+          {editingWorkdir ? (
+            <div className="flex items-center gap-2 mb-2">
+              <FolderOutlined className="text-gray-400 text-sm shrink-0" />
+              <Input
+                size="small"
+                value={workdirInput}
+                onChange={(e) => setWorkdirInput(e.target.value)}
+                onKeyDown={onWorkdirKeyDown}
+                placeholder="/sata12/my/data"
+                className="text-xs"
+                autoFocus
+              />
+              <Button size="small" type="primary" onClick={confirmWorkdir} className="text-xs">
+                确认
+              </Button>
+              <Button size="small" onClick={() => setEditingWorkdir(false)} className="text-xs">
+                取消
+              </Button>
+            </div>
+          ) : workdir ? (
+            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-gray-50 text-xs text-gray-500 cursor-pointer hover:bg-gray-100" onClick={startEditWorkdir}>
+              <FolderOutlined className="text-gray-400" />
+              <span className="font-mono flex-1">{workdir}</span>
+              <CloseCircleOutlined className="text-gray-300 hover:text-gray-500" onClick={(e) => { e.stopPropagation(); clearWorkdir(); }} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 mb-2 px-2 py-1 text-xs text-gray-300 cursor-pointer hover:text-gray-400" onClick={startEditWorkdir}>
+              <FolderOutlined />
+              <span>设置工作目录以限定文件操作范围</span>
+            </div>
+          )}
+          <div className="flex gap-2 items-end">
+            <Input.TextArea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="输入消息，Enter 发送，Shift+Enter 换行"
+              autoSize={{ minRows: 1, maxRows: 4 }}
+              disabled={loading}
+              className="rounded-[10px] text-sm px-3 py-2"
+            />
+            <Button type="primary" icon={<SendOutlined />} onClick={onSend} loading={loading} className="rounded-[10px] h-[38px] px-[18px] flex items-center">
+              发送
+            </Button>
+          </div>
         </div>
       </div>
     </div>

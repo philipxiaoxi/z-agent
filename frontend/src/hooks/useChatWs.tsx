@@ -6,11 +6,12 @@ import {
   type ChatWs,
   type WsStatus,
   type ToolResultEvent,
+  type RequireConfirmEvent,
 } from "../lib/ws";
 import { useChatStore } from "../stores/chat-store";
 
 export function useChatWs() {
-  const { appendText, addToolCall, addToolResult } = useChatStore();
+  const { appendText, addToolCall, addToolResult, setWorkdir } = useChatStore();
   const [loading, setLoading] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const wsRef = useRef<ChatWs | null>(null);
@@ -27,9 +28,10 @@ export function useChatWs() {
       onToolResult(data: ToolResultEvent) {
         addToolResult(data.tool, data.result);
       },
-      onRequireConfirm(data) {
+      onRequireConfirm(data: RequireConfirmEvent) {
+        const isPathGate = data.confirm_type === "path_gate";
         Modal.confirm({
-          title: "需要确认",
+          title: isPathGate ? "路径门禁" : "需要确认",
           icon: <ToolOutlined />,
           content: data.question,
           okText: "允许",
@@ -37,6 +39,9 @@ export function useChatWs() {
           onOk: () => ws.sendConfirm(data.id, true),
           onCancel: () => ws.sendConfirm(data.id, false),
         });
+      },
+      onWorkdirChanged(path: string) {
+        setWorkdir(path);
       },
       onDone() {
         setLoading(false);
@@ -48,7 +53,7 @@ export function useChatWs() {
     });
     wsRef.current = ws;
     return () => ws.close();
-  }, [appendText, addToolCall, addToolResult]);
+  }, [appendText, addToolCall, addToolResult, setWorkdir]);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -57,6 +62,10 @@ export function useChatWs() {
     },
     []
   );
+
+  const handleSetWorkdir = useCallback((path: string) => {
+    wsRef.current?.sendSetWorkdir(path);
+  }, []);
 
   const handleReconnect = useCallback(() => {
     wsRef.current?.reconnect();
@@ -67,6 +76,7 @@ export function useChatWs() {
     loading,
     setLoading,
     handleSend,
+    handleSetWorkdir,
     handleReconnect,
   };
 }
