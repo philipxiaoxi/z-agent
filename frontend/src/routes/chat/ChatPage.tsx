@@ -50,42 +50,56 @@ export default function ChatPage() {
   const emptyState = useMemo(() => <WelcomeCard />, []);
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#f5f5f5" }}>
-      <div style={{ padding: "14px 24px", background: "#fff", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ThunderboltOutlined style={{ fontSize: 18, color: "#1677ff" }} />
-          <Text strong style={{ fontSize: 15 }}>极同学</Text>
-          <Text style={{ fontSize: 12, color: "#999" }}>你的 NAS AI 助手</Text>
+    <div className="h-screen flex flex-col bg-gray-100">
+      <div className="px-6 py-3.5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2">
+          <ThunderboltOutlined className="text-lg text-[#1677ff]" />
+          <Text strong className="text-[15px]">极同学</Text>
+          <Text className="text-xs text-gray-400">你的 NAS AI 助手</Text>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusMeta?.color ?? "#ff4d4f", display: "inline-block", flexShrink: 0 }} />
-          <Text style={{ fontSize: 12, color: "#999" }}>{statusMeta?.label ?? "未连接"}</Text>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: statusMeta?.color ?? "#ff4d4f" }} />
+          <Text className="text-xs text-gray-400">{statusMeta?.label ?? "未连接"}</Text>
           {wsStatus === "disconnected" && (
-            <Button size="small" type="text" icon={<ReloadOutlined />} onClick={handleReconnect} style={{ fontSize: 12, color: "#999" }} />
+            <Button size="small" type="text" icon={<ReloadOutlined />} onClick={handleReconnect} className="text-xs text-gray-400" />
           )}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "auto", padding: "32px 16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ width: "100%", maxWidth: CHAT_MAX_WIDTH, display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="flex-1 overflow-auto p-8 flex flex-col items-center">
+        <div className="w-full flex flex-col gap-5" style={{ maxWidth: CHAT_MAX_WIDTH }}>
           {messages.length === 0 && emptyState}
           {messages.map((msg) => (
-            <div key={msg.id} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 10, alignItems: "flex-start", paddingLeft: msg.role === "assistant" ? 0 : 42, paddingRight: msg.role === "user" ? 0 : 42 }}>
+            <div
+              key={msg.id}
+              className={`flex gap-2.5 items-start ${
+                msg.role === "user"
+                  ? "justify-end pl-[42px] pr-0"
+                  : "justify-start pl-0 pr-[42px]"
+              }`}
+            >
               {msg.role === "assistant" && (
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1677ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 4 }}>
-                  <ThunderboltOutlined style={{ color: "#fff", fontSize: 14 }} />
+                <div className="w-[30px] h-[30px] rounded-full bg-[#1677ff] flex items-center justify-center shrink-0 mt-1">
+                  <ThunderboltOutlined className="text-white text-sm" />
                 </div>
               )}
-              <div style={{ maxWidth: msg.role === "user" ? "70%" : "85%", padding: msg.role === "user" ? "8px 16px" : "12px 16px", borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: msg.role === "user" ? "#1677ff" : "#fff", color: msg.role === "user" ? "#fff" : "#333", lineHeight: 1.65, fontSize: 14, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", wordBreak: "break-word", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div
+                className={`text-sm leading-relaxed shadow-sm break-words flex flex-col gap-2 ${
+                  msg.role === "user"
+                    ? "bg-[#1677ff] text-white px-4 py-2 rounded-[18px_18px_4px_18px]"
+                    : "bg-white text-gray-700 px-4 py-3 rounded-[18px_18px_18px_4px]"
+                }`}
+                style={{ maxWidth: msg.role === "user" ? "70%" : "85%" }}
+              >
                 {msg.role === "assistant" ? (
                   msg.blocks.length === 0 ? <Spin size="small" /> : msg.blocks.map((b) => <BlockView key={b.id} block={b} />)
                 ) : (
-                  <span style={{ whiteSpace: "pre-wrap" }}>{msg.blocks.find((b) => b.type === "text")?.content || ""}</span>
+                  <span className="whitespace-pre-wrap">{msg.blocks.find((b) => b.type === "text")?.content || ""}</span>
                 )}
               </div>
               {msg.role === "user" && (
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 4 }}>
-                  <UserOutlined style={{ color: "#666", fontSize: 14 }} />
+                <div className="w-[30px] h-[30px] rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-1">
+                  <UserOutlined className="text-gray-500 text-sm" />
                 </div>
               )}
             </div>
@@ -94,8 +108,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #f0f0f0", flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 8, maxWidth: CHAT_MAX_WIDTH, margin: "0 auto", alignItems: "flex-end" }}>
+      <div className="px-4 py-3 bg-white border-t border-gray-100 shrink-0">
+        <div className="flex gap-2 mx-auto items-end" style={{ maxWidth: CHAT_MAX_WIDTH }}>
           <Input.TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -103,9 +117,9 @@ export default function ChatPage() {
             placeholder="输入消息，Enter 发送，Shift+Enter 换行"
             autoSize={{ minRows: 1, maxRows: 4 }}
             disabled={loading}
-            style={{ borderRadius: 10, fontSize: 14, padding: "8px 12px" }}
+            className="rounded-[10px] text-sm px-3 py-2"
           />
-          <Button type="primary" icon={<SendOutlined />} onClick={onSend} loading={loading} style={{ borderRadius: 10, height: 38, paddingInline: 18, display: "flex", alignItems: "center" }}>
+          <Button type="primary" icon={<SendOutlined />} onClick={onSend} loading={loading} className="rounded-[10px] h-[38px] px-[18px] flex items-center">
             发送
           </Button>
         </div>

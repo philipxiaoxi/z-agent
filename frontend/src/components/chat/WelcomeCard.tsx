@@ -4,7 +4,6 @@ import {
   ThunderboltOutlined,
   DatabaseOutlined,
   HddOutlined,
-  CheckCircleOutlined,
   ThunderboltFilled,
 } from "@ant-design/icons";
 
@@ -65,7 +64,7 @@ export default function WelcomeCard() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: 80 }}>
+      <div className="flex justify-center p-20">
         <Spin />
       </div>
     );
@@ -73,9 +72,9 @@ export default function WelcomeCard() {
 
   if (error) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: 80, color: "#bbb" }}>
-        <ThunderboltFilled style={{ fontSize: 48, opacity: 0.2 }} />
-        <Text style={{ color: "#bbb", fontSize: 14 }}>无法获取存储信息，请检查后端服务</Text>
+      <div className="flex flex-col items-center gap-2 p-20 text-gray-300">
+        <ThunderboltFilled className="text-[48px] opacity-20" />
+        <Text className="text-gray-300 text-sm">无法获取存储信息，请检查后端服务</Text>
       </div>
     );
   }
@@ -86,23 +85,23 @@ export default function WelcomeCard() {
   const usagePct = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "24px 0" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <ThunderboltOutlined style={{ fontSize: 22, color: "#1677ff" }} />
+    <div className="flex flex-col gap-4 py-6">
+      <div className="flex items-center gap-2.5">
+        <ThunderboltOutlined className="text-[22px] text-[#1677ff]" />
         <div>
-          <Text strong style={{ fontSize: 18 }}>欢迎使用极同学</Text>
+          <Text strong className="text-lg">欢迎使用极同学</Text>
           <br />
-          <Text style={{ fontSize: 13, color: "#999" }}>你的 NAS 智能管理助手，通过自然语言管理存储设备</Text>
+          <Text className="text-[13px] text-gray-400">你的 NAS 智能管理助手，通过自然语言管理存储设备</Text>
         </div>
       </div>
 
-      <Card style={{ borderRadius: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <DatabaseOutlined style={{ color: "#1677ff" }} />
+      <Card className="rounded-xl">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-1.5">
+            <DatabaseOutlined className="text-[#1677ff]" />
             <Text strong>总存储概览</Text>
           </div>
-          <Text style={{ fontSize: 12, color: "#999" }}>共 {pools.length} 个存储池</Text>
+          <Text className="text-xs text-gray-400">共 {pools.length} 个存储池</Text>
         </div>
         <Progress
           percent={usagePct}
@@ -110,7 +109,7 @@ export default function WelcomeCard() {
           size="small"
           style={{ marginBottom: 16 }}
         />
-        <div style={{ display: "flex", gap: 24 }}>
+        <div className="flex gap-6">
           <Statistic title="总容量" value={formatBytes(totalBytes)} valueStyle={{ fontSize: 16 }} />
           <Statistic title="已用" value={formatBytes(usedBytes)} valueStyle={{ fontSize: 16, color: usagePct > 85 ? "#ff4d4f" : "#333" }} />
           <Statistic title="可用" value={formatBytes(availBytes)} valueStyle={{ fontSize: 16, color: "#52c41a" }} />
@@ -120,36 +119,36 @@ export default function WelcomeCard() {
       {pools.map((pool) => {
         const pct = pool.total_size > 0 ? Math.round((pool.usage_size / pool.total_size) * 100) : 0;
         return (
-          <Card key={pool.id} size="small" style={{ borderRadius: 10 }} bodyStyle={{ padding: "12px 16px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <HddOutlined style={{ color: "#1677ff" }} />
+          <Card key={pool.id} size="small" className="rounded-[10px]" bodyStyle={{ padding: "12px 16px" }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <HddOutlined className="text-[#1677ff]" />
                 <div>
                   <Text strong>{pool.display_name || pool.name}</Text>
-                  <Text style={{ fontSize: 12, color: "#999", marginLeft: 6 }}>{pool.name}</Text>
+                  <Text className="text-xs text-gray-400 ml-1.5">{pool.name}</Text>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Text style={{ fontSize: 12, color: "#999" }}>{pool.safe_hdd_count} 块磁盘</Text>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: pool.status === "ok" ? "#52c41a" : "#ff4d4f", display: "inline-block" }} />
-                <Text style={{ fontSize: 12, color: pool.status === "ok" ? "#52c41a" : "#ff4d4f" }}>{pool.status === "ok" ? "正常" : pool.status}</Text>
+              <div className="flex items-center gap-2">
+                <Text className="text-xs text-gray-400">{pool.safe_hdd_count} 块磁盘</Text>
+                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: pool.status === "ok" ? "#52c41a" : "#ff4d4f" }} />
+                <Text className="text-xs" style={{ color: pool.status === "ok" ? "#52c41a" : "#ff4d4f" }}>{pool.status === "ok" ? "正常" : pool.status}</Text>
               </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className="flex items-center gap-3">
               <Progress
                 percent={pct}
                 size="small"
                 strokeColor={statusColor(pct)}
                 style={{ flex: 1, marginBottom: 0 }}
               />
-              <Text style={{ fontSize: 12, color: "#999", whiteSpace: "nowrap" }}>
+              <Text className="text-xs text-gray-400 whitespace-nowrap">
                 {formatBytes(pool.usage_size)} / {formatBytes(pool.total_size)}
               </Text>
             </div>
             {pool.disk_list && pool.disk_list.length > 0 && (
-              <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+              <div className="flex gap-1.5 mt-2 flex-wrap">
                 {pool.disk_list.map((disk) => (
-                  <Text key={disk.sn} style={{ fontSize: 11, color: "#999", background: "#f5f5f5", padding: "2px 8px", borderRadius: 4 }}>
+                  <Text key={disk.sn} className="text-[11px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded">
                     {disk.model} · {disk.temp}°C
                   </Text>
                 ))}
@@ -159,7 +158,7 @@ export default function WelcomeCard() {
         );
       })}
 
-      <div style={{ background: "#f6ffed", border: "1px solid #b7eb8f", borderRadius: 10, padding: "12px 16px", fontSize: 13, color: "#333", lineHeight: 1.6 }}>
+      <div className="bg-green-50 border border-green-300 rounded-[10px] px-4 py-3 text-[13px] text-gray-700 leading-relaxed">
         你可以尝试问我：<br />
         「sata12 存储池还剩多少空间」「帮我搜索一下文件名包含『备份』的文件」「删除 downloads 目录下 30 天前的文件」
       </div>

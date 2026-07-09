@@ -26,12 +26,12 @@ export type StatusKey = keyof typeof STATUS_META;
 
 const ToolCallBlock = memo(function ToolCallBlock({ block }: { block: Block }) {
   return (
-    <div style={{ border: "1px solid #e8e8e8", borderLeft: "3px solid #1677ff", borderRadius: 8, background: "#fafafa", padding: "10px 14px", fontSize: 13 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-        <ToolOutlined style={{ color: "#1677ff", fontSize: 14 }} />
-        <span style={{ fontWeight: 600, color: "#333" }}>调用工具: {block.tool}</span>
+    <div className="border border-gray-200 border-l-[3px] border-l-[#1677ff] rounded-lg bg-gray-50 px-3.5 py-2.5 text-[13px]">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <ToolOutlined className="text-[#1677ff] text-sm" />
+        <span className="font-semibold text-gray-700">调用工具: {block.tool}</span>
       </div>
-      <pre style={{ margin: 0, fontSize: 12, color: "#666", whiteSpace: "pre-wrap", wordBreak: "break-all", fontFamily: CODE_FONT }}>
+      <pre className="m-0 text-xs text-gray-500 whitespace-pre-wrap break-all" style={{ fontFamily: CODE_FONT }}>
         {JSON.stringify(block.args, null, 2)}
       </pre>
     </div>
@@ -44,17 +44,17 @@ const ToolResultBlock = memo(function ToolResultBlock({ block }: { block: Block 
   const preview = firstLine.length > PREVIEW_MAX ? firstLine.slice(0, PREVIEW_MAX) + "…" : firstLine;
 
   return (
-    <div style={{ border: "1px solid #b7eb8f", borderLeft: "3px solid #52c41a", borderRadius: 8, background: "#f6ffed", padding: "10px 14px", fontSize: 13 }}>
-      <div onClick={() => toggleToolResult(block.id)} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}>
-        {block.collapsed ? <RightOutlined style={{ color: "#52c41a", fontSize: 12 }} /> : <DownOutlined style={{ color: "#52c41a", fontSize: 12 }} />}
-        <CheckCircleOutlined style={{ color: "#52c41a", fontSize: 14 }} />
-        <span style={{ fontWeight: 600, color: "#333" }}>{block.tool} 返回</span>
+    <div className="border border-green-300 border-l-[3px] border-l-green-500 rounded-lg bg-green-50 px-3.5 py-2.5 text-[13px]">
+      <div onClick={() => toggleToolResult(block.id)} className="flex items-center gap-1.5 cursor-pointer select-none">
+        {block.collapsed ? <RightOutlined className="text-green-500 text-xs" /> : <DownOutlined className="text-green-500 text-xs" />}
+        <CheckCircleOutlined className="text-green-500 text-sm" />
+        <span className="font-semibold text-gray-700">{block.tool} 返回</span>
         {block.collapsed && preview && (
-          <span style={{ marginLeft: 8, color: "#999", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{preview}</span>
+          <span className="ml-2 text-gray-400 text-xs overflow-hidden text-ellipsis whitespace-nowrap flex-1">{preview}</span>
         )}
       </div>
       {!block.collapsed && (
-        <pre style={{ margin: "8px 0 0 0", fontSize: 12, color: "#333", whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 400, overflow: "auto", fontFamily: CODE_FONT }}>
+        <pre className="mt-2 text-xs text-gray-700 whitespace-pre-wrap break-all max-h-[400px] overflow-auto" style={{ fontFamily: CODE_FONT }}>
           {block.result}
         </pre>
       )}
@@ -72,16 +72,16 @@ const TextBlock = memo(function TextBlock({ block }: { block: Block }) {
       remarkPlugins={[remarkGfm]}
       components={{
         p({ children }) {
-          return <p style={{ margin: "4px 0" }}>{children}</p>;
+          return <p className="my-1">{children}</p>;
         },
         code({ className, children, ...props }) {
           const isInline = !className;
           return isInline ? (
-            <code style={{ background: "#f0f0f0", padding: "1px 5px", borderRadius: 4, fontSize: "0.88em" }} {...props}>
+            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-[0.88em]" {...props}>
               {children}
             </code>
           ) : (
-            <pre style={{ background: "#1e1e1e", color: "#d4d4d4", padding: 12, borderRadius: 8, overflow: "auto", fontSize: "0.85em", lineHeight: 1.5, margin: "8px 0" }}>
+            <pre className="bg-[#1e1e1e] text-[#d4d4d4] p-3 rounded-lg overflow-auto text-[0.85em] leading-relaxed my-2">
               <code className={className} {...props}>{children}</code>
             </pre>
           );
