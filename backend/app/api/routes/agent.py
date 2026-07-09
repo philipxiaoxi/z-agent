@@ -10,7 +10,7 @@ from agno.models.deepseek import DeepSeek
 
 from app.core.config import settings
 from app.core.context import ConversationContext
-from app.core.prompts import SYSTEM_DESCRIPTION, SYSTEM_INSTRUCTIONS
+from app.core.prompt.prompts import SYSTEM_DESCRIPTION, SYSTEM_INSTRUCTIONS
 from app.core.tools import get_tools
 from app.core.tools.confirm import ConfirmManager
 
