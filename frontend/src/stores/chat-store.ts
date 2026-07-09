@@ -24,7 +24,7 @@ interface ChatState {
   appendText: (chunk: string) => void;
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
-  toggleToolResult: (blockId: string) => void;
+  toggleBlockCollapsed: (blockId: string) => void;
   clear: () => void;
 }
 
@@ -78,7 +78,7 @@ export const useChatStore = create<ChatState>((set) => ({
         type: "tool_call",
         tool,
         args,
-        collapsed: false,
+        collapsed: true,
       })
     ),
 
@@ -93,7 +93,7 @@ export const useChatStore = create<ChatState>((set) => ({
       })
     ),
 
-  toggleToolResult: (blockId) =>
+  toggleBlockCollapsed: (blockId) =>
     set((s) => ({
       messages: s.messages.map((msg) => ({
         ...msg,
