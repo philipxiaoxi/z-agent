@@ -40,7 +40,8 @@ async def agent_ws(ws: WebSocket):
     # --- 获取工具列表 ---
     try:
         tools = await get_tools(confirm_mgr, workdir_ctx=ctx,
-                                on_workdir_changed=_on_workdir_changed)
+                                on_workdir_changed=_on_workdir_changed,
+                                send_to_frontend=lambda d: asyncio.ensure_future(_send(ws, d)))
         logger.info("agent tools: %s", [t.name for t in tools])
     except Exception as e:
         logger.error("failed to load tools: %s", e)
