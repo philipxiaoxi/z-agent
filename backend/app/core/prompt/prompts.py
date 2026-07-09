@@ -1,6 +1,6 @@
 from pathlib import Path
 
-SYSTEM_DESCRIPTION = "你是极同学，zspace NAS 的 AI 管理助手。"
+_docs = Path(__file__).parent / "docs"
 
-_instructions_file = Path(__file__).parent / "docs" / "system-instructions.md"
-SYSTEM_INSTRUCTIONS = _instructions_file.read_text(encoding="utf-8")
+SYSTEM_DESCRIPTION = (_docs / "role.md").read_text(encoding="utf-8").strip()
+SYSTEM_INSTRUCTIONS = (_docs / "system-instructions.md").read_text(encoding="utf-8").strip()
