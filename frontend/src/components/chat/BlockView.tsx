@@ -66,28 +66,11 @@ const TextBlock = memo(function TextBlock({ block }: { block: Block }) {
   }
 
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        p({ children }) {
-          return <p className="my-1">{children}</p>;
-        },
-        code({ className, children, ...props }) {
-          const isInline = !className;
-          return isInline ? (
-            <code className="bg-gray-100 px-1.5 py-0.5 rounded text-[0.88em]" {...props}>
-              {children}
-            </code>
-          ) : (
-            <pre className="bg-[#1e1e1e] text-[#d4d4d4] p-3 rounded-lg overflow-auto text-[0.85em] leading-relaxed my-2">
-              <code className={className} {...props}>{children}</code>
-            </pre>
-          );
-        },
-      }}
-    >
-      {block.content}
-    </ReactMarkdown>
+    <div className="markdown-body">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {block.content}
+      </ReactMarkdown>
+    </div>
   );
 });
 

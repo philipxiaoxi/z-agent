@@ -1,1 +1,9 @@
 @import "tailwindcss";
+@import "github-markdown-css/github-markdown.css";
+
+/* chat 气泡内适配 */
+.markdown-body {
+  background-color: transparent;
+  font-size: inherit;
+  color: inherit;
+}
