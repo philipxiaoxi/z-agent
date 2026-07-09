@@ -73,7 +73,7 @@ export default function WelcomeCard() {
   if (error) {
     return (
       <div className="flex flex-col items-center gap-2 p-20 text-gray-300">
-        <ThunderboltFilled className="text-[48px] opacity-20" />
+        <ThunderboltFilled className="text-[48px] opacity-20" style={{ color: "#1677ff" }} />
         <Text className="text-gray-300 text-sm">无法获取存储信息，请检查后端服务</Text>
       </div>
     );
@@ -87,18 +87,18 @@ export default function WelcomeCard() {
   return (
     <div className="flex flex-col gap-4 py-6">
       <div className="flex items-center gap-2.5">
-        <ThunderboltOutlined className="text-[22px] text-[#1677ff]" />
+        <ThunderboltOutlined className="text-[22px]" style={{ color: "#1677ff" }} />
         <div>
           <Text strong className="text-lg">欢迎使用极同学</Text>
           <br />
-          <Text className="text-[13px] text-gray-400">你的 NAS 智能管理助手，通过自然语言管理存储设备</Text>
+          <span className="text-[13px] text-gray-400">你的 NAS 智能管理助手，通过自然语言管理存储设备</span>
         </div>
       </div>
 
       <Card className="rounded-xl">
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-1.5">
-            <DatabaseOutlined className="text-[#1677ff]" />
+            <DatabaseOutlined style={{ color: "#1677ff" }} />
             <Text strong>总存储概览</Text>
           </div>
           <Text className="text-xs text-gray-400">共 {pools.length} 个存储池</Text>
@@ -110,19 +110,19 @@ export default function WelcomeCard() {
           style={{ marginBottom: 16 }}
         />
         <div className="flex gap-6">
-          <Statistic title="总容量" value={formatBytes(totalBytes)} valueStyle={{ fontSize: 16 }} />
-          <Statistic title="已用" value={formatBytes(usedBytes)} valueStyle={{ fontSize: 16, color: usagePct > 85 ? "#ff4d4f" : "#333" }} />
-          <Statistic title="可用" value={formatBytes(availBytes)} valueStyle={{ fontSize: 16, color: "#52c41a" }} />
+          <Statistic title="总容量" value={formatBytes(totalBytes)} styles={{ content: { fontSize: 16 } }} />
+          <Statistic title="已用" value={formatBytes(usedBytes)} styles={{ content: { fontSize: 16, color: usagePct > 85 ? "#ff4d4f" : "#333" } }} />
+          <Statistic title="可用" value={formatBytes(availBytes)} styles={{ content: { fontSize: 16, color: "#52c41a" } }} />
         </div>
       </Card>
 
       {pools.map((pool) => {
         const pct = pool.total_size > 0 ? Math.round((pool.usage_size / pool.total_size) * 100) : 0;
         return (
-          <Card key={pool.id} size="small" className="rounded-[10px]" bodyStyle={{ padding: "12px 16px" }}>
+          <Card key={pool.id} size="small" className="rounded-[10px]" styles={{ body: { padding: "12px 16px" } }}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
-                <HddOutlined className="text-[#1677ff]" />
+                <HddOutlined style={{ color: "#1677ff" }} />
                 <div>
                   <Text strong>{pool.display_name || pool.name}</Text>
                   <Text className="text-xs text-gray-400 ml-1.5">{pool.name}</Text>

@@ -53,9 +53,9 @@ export default function ChatPage() {
     <div className="h-screen flex flex-col bg-gray-100">
       <div className="px-6 py-3.5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <ThunderboltOutlined className="text-lg text-[#1677ff]" />
+          <ThunderboltOutlined className="text-lg" style={{ color: "#1677ff" }} />
           <Text strong className="text-[15px]">极同学</Text>
-          <Text className="text-xs text-gray-400">你的 NAS AI 助手</Text>
+          <span className="text-xs text-gray-400">你的 NAS AI 助手</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: statusMeta?.color ?? "#ff4d4f" }} />
@@ -79,8 +79,8 @@ export default function ChatPage() {
               }`}
             >
               {msg.role === "assistant" && (
-                <div className="w-[30px] h-[30px] rounded-full bg-[#1677ff] flex items-center justify-center shrink-0 mt-1">
-                  <ThunderboltOutlined className="text-white text-sm" />
+                <div className="w-[30px] h-[30px] rounded-full bg-gray-200 flex items-center justify-center shrink-0 mt-1">
+                  <ThunderboltOutlined className="text-gray-500 text-sm" />
                 </div>
               )}
               <div
@@ -98,7 +98,7 @@ export default function ChatPage() {
                 )}
               </div>
               {msg.role === "user" && (
-                <div className="w-[30px] h-[30px] rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-1">
+                <div className="w-[30px] h-[30px] rounded-full bg-gray-200 flex items-center justify-center shrink-0 mt-1">
                   <UserOutlined className="text-gray-500 text-sm" />
                 </div>
               )}
