@@ -11,6 +11,7 @@ from agno.models.deepseek import DeepSeek
 
 from app.core.config import settings
 from app.core.context import ConversationContext
+from app.core.prompts import SYSTEM_DESCRIPTION, SYSTEM_INSTRUCTIONS
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -35,17 +36,8 @@ async def _ensure_agent() -> Agent:
         model=DeepSeek(id="deepseek-v4-flash", api_key=settings.DEEPSEEK_API_KEY),
         tools=[_mcp],
         markdown=True,
-        instructions="""你是极同学，zspace NAS 的 AI 管理助手。
-
-## 能力
-- 查看存储池信息（容量、健康状态、磁盘等）
-- 搜索和管理 NAS 上的文件
-- 回答用户关于 NAS 的问题
-
-## 规则
-1. 用中文回答，简洁清晰
-2. 涉及删除、修改等危险操作，先向用户确认
-3. 文件路径格式为 /{pool_name}/my/{path}""",
+        description=SYSTEM_DESCRIPTION,
+        instructions=SYSTEM_INSTRUCTIONS,
     )
     return _agent
 
