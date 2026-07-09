@@ -10,6 +10,7 @@ from agno.tools.mcp import MCPTools
 from agno.models.deepseek import DeepSeek
 
 from app.core.config import settings
+from app.core.context import ConversationContext
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -56,7 +57,8 @@ async def _send(ws: WebSocket, data: dict) -> None:
 @router.websocket("/ws")
 async def agent_ws(ws: WebSocket):
     await ws.accept()
-    logger.info("agent WebSocket connected")
+    ctx = ConversationContext()
+    logger.info("agent WebSocket connected, session=%s", ctx.session_id)
 
     try:
         agent = await _ensure_agent()
@@ -68,9 +70,17 @@ async def agent_ws(ws: WebSocket):
             msg_type = data.get("type")
 
             if msg_type == "message":
+                user_content = data.get("content", "")
+                ctx.add_user(user_content)
                 text_buf = ""
+                full_response = ""
 
-                async for event in agent.arun(data.get("content", ""), stream=True, stream_events=True):
+                async for event in agent.arun(
+                    ctx.get_history(),
+                    stream=True,
+                    stream_events=True,
+                    session_id=ctx.session_id,
+                ):
                     et = event.event if hasattr(event, "event") else type(event).__name__
 
                     if et in ("ToolCallStarted",):
@@ -127,14 +137,18 @@ async def agent_ws(ws: WebSocket):
                             continue
                         if chunk == "":
                             text_buf += "\n"
+                            full_response += "\n"
                         else:
                             text_buf += str(chunk)
+                            full_response += str(chunk)
                             if "\n" in text_buf or len(text_buf) >= 2:
                                 await _send(ws, {"type": "text", "content": text_buf})
                                 text_buf = ""
 
                 if text_buf:
                     await _send(ws, {"type": "text", "content": text_buf})
+                if full_response:
+                    ctx.add_assistant(full_response)
                 await _send(ws, {"type": "done"})
 
             elif msg_type == "confirm":
