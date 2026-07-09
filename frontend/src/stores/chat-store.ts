@@ -1,6 +1,19 @@
 import { create } from "zustand";
 
-export type BlockType = "text" | "tool_call" | "tool_result";
+export type BlockType = "text" | "tool_call" | "tool_result" | "file_list";
+
+export interface FileItem {
+  name: string;
+  type: "file" | "folder";
+  size?: number;
+  modified_at?: string;
+}
+
+export interface FileListData {
+  current_path: string;
+  items: FileItem[];
+  total: number;
+}
 
 export interface Block {
   id: string;
@@ -9,6 +22,7 @@ export interface Block {
   tool?: string;
   args?: Record<string, unknown>;
   result?: string;
+  fileList?: FileListData;
   collapsed: boolean;
 }
 
@@ -25,6 +39,7 @@ interface ChatState {
   appendText: (chunk: string) => void;
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
+  addFileList: (data: FileListData) => void;
   toggleBlockCollapsed: (blockId: string) => void;
   setWorkdir: (path: string) => void;
   clear: () => void;
@@ -93,6 +108,16 @@ export const useChatStore = create<ChatState>((set) => ({
         tool,
         result,
         collapsed: true,
+      })
+    ),
+
+  addFileList: (data) =>
+    set((s) =>
+      withNewBlock(s, {
+        id: crypto.randomUUID(),
+        type: "file_list",
+        fileList: data,
+        collapsed: false,
       })
     ),
 

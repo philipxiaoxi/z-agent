@@ -11,7 +11,7 @@ import {
 import { useChatStore } from "../stores/chat-store";
 
 export function useChatWs() {
-  const { appendText, addToolCall, addToolResult, setWorkdir } = useChatStore();
+  const { appendText, addToolCall, addToolResult, addFileList, setWorkdir } = useChatStore();
   const [loading, setLoading] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const wsRef = useRef<ChatWs | null>(null);
@@ -27,6 +27,9 @@ export function useChatWs() {
       },
       onToolResult(data: ToolResultEvent) {
         addToolResult(data.tool, data.result);
+      },
+      onFileList(data) {
+        addFileList(data);
       },
       onRequireConfirm(data: RequireConfirmEvent) {
         const isPathGate = data.confirm_type === "path_gate";
@@ -53,7 +56,7 @@ export function useChatWs() {
     });
     wsRef.current = ws;
     return () => ws.close();
-  }, [appendText, addToolCall, addToolResult, setWorkdir]);
+    }, [appendText, addToolCall, addToolResult, addFileList, setWorkdir]);
 
   const handleSend = useCallback(
     (text: string) => {

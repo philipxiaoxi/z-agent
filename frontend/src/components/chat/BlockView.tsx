@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import type { Block } from "../../stores/chat-store";
 import { useChatStore } from "../../stores/chat-store";
+import FileListBlock from "./FileListBlock";
 
 const CODE_FONT = '"SF Mono", "Monaco", "Cascadia Code", monospace';
 
@@ -74,12 +75,26 @@ const TextBlock = memo(function TextBlock({ block }: { block: Block }) {
   );
 });
 
-export default memo(function BlockView({ block }: { block: Block }) {
+interface BlockViewProps {
+  block: Block;
+  onNavigate?: (path: string) => void;
+}
+
+export default memo(function BlockView({ block, onNavigate }: BlockViewProps) {
   switch (block.type) {
     case "tool_call":
       return <ToolCallBlock block={block} />;
     case "tool_result":
       return <ToolResultBlock block={block} />;
+    case "file_list":
+      return (
+        <FileListBlock
+          fileList={block.fileList!}
+          collapsed={block.collapsed}
+          blockId={block.id}
+          onNavigate={onNavigate}
+        />
+      );
     default:
       return <TextBlock block={block} />;
   }

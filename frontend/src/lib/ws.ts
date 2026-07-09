@@ -20,6 +20,12 @@ export interface ToolResultEvent {
   result: string;
 }
 
+export interface FileListEvent {
+  current_path: string;
+  items: { name: string; type: "file" | "folder"; size?: number; modified_at?: string }[];
+  total: number;
+}
+
 export type WsStatus = "connecting" | "connected" | "disconnected";
 
 export interface WsEvents {
@@ -27,6 +33,7 @@ export interface WsEvents {
   onText: (content: string) => void;
   onToolStart: (data: ToolCallEvent) => void;
   onToolResult: (data: ToolResultEvent) => void;
+  onFileList: (data: FileListEvent) => void;
   onRequireConfirm: (data: RequireConfirmEvent) => void;
   onWorkdirChanged: (path: string) => void;
   onDone: () => void;
@@ -45,6 +52,7 @@ type ServerEvent =
   | { type: "text"; content: string }
   | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
   | { type: "tool_result"; id: string; tool: string; result: string }
+  | { type: "file_list"; data: import("../stores/chat-store").FileListData }
   | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string; confirm_type?: string; path?: string; workdir?: string }
   | { type: "workdir_changed"; path: string }
   | { type: "done" }
@@ -87,6 +95,9 @@ export function createChatWs(events: WsEvents): ChatWs {
             break;
           case "tool_result":
             events.onToolResult({ id: data.id, tool: data.tool, result: data.result });
+            break;
+          case "file_list":
+            events.onFileList(data.data);
             break;
           case "require_confirm":
             events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question, confirm_type: data.confirm_type, path: data.path, workdir: data.workdir });
