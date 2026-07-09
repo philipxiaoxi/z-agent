@@ -49,6 +49,18 @@ export function createChatWs(events: WsEvents): ChatWs {
   const url = `${protocol}//${WS_BASE}/api/agent/ws`;
   let ws: WebSocket;
 
+  function safeClose() {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.onclose = null;
+      ws.onerror = null;
+      ws.close();
+    } else if (ws.readyState === WebSocket.CONNECTING) {
+      ws.onopen = null;
+      ws.onclose = null;
+      ws.onerror = null;
+    }
+  }
+
   function connect() {
     ws = new WebSocket(url);
     events.onStatusChange("connecting");
@@ -110,11 +122,11 @@ export function createChatWs(events: WsEvents): ChatWs {
       ws.send(JSON.stringify({ type: "confirm", id, approved }));
     },
     reconnect() {
-      ws.close();
+      safeClose();
       connect();
     },
     close() {
-      ws.close();
+      safeClose();
     },
   };
 }
