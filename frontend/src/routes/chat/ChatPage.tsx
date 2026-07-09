@@ -19,10 +19,18 @@ export default function ChatPage() {
   const { wsStatus, loading, setLoading, handleSend, handleReconnect } = useChatWs();
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollKey = useMemo(() => {
+    const len = messages.length;
+    if (len === 0) return "0";
+    const last = messages[len - 1];
+    const blocks = last.blocks;
+    const lastBlock = blocks[blocks.length - 1];
+    return `${len}-${blocks.length}-${lastBlock?.content?.length ?? 0}-${lastBlock?.result?.length ?? 0}`;
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [scrollKey]);
 
   const statusMeta = STATUS_META[wsStatus as StatusKey];
 
