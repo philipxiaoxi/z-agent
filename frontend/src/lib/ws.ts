@@ -49,6 +49,14 @@ export interface ChatWs {
   close: () => void;
 }
 
+function sendOrQueue(ws: WebSocket, payload: Record<string, unknown>) {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(payload));
+  } else if (ws.readyState === WebSocket.CONNECTING) {
+    ws.addEventListener("open", () => ws.send(JSON.stringify(payload)), { once: true });
+  }
+}
+
 type ServerEvent =
   | { type: "text"; content: string }
   | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
@@ -137,22 +145,18 @@ export function createChatWs(events: WsEvents): ChatWs {
 
   return {
     sendMessage(text: string, sessionId?: string) {
-      if (ws.readyState !== WebSocket.OPEN) {
-        events.onError("WebSocket 未连接");
-        return;
-      }
       const payload: Record<string, unknown> = { type: "message", content: text };
       if (sessionId) payload.session_id = sessionId;
-      ws.send(JSON.stringify(payload));
+      sendOrQueue(ws, payload);
     },
     sendConfirm(id: string, approved: boolean) {
-      ws.send(JSON.stringify({ type: "confirm", id, approved }));
+      sendOrQueue(ws, { type: "confirm", id, approved });
     },
     sendSetWorkdir(path: string) {
-      ws.send(JSON.stringify({ type: "set_workdir", path }));
+      sendOrQueue(ws, { type: "set_workdir", path });
     },
     sendSetSession(sessionId: string) {
-      ws.send(JSON.stringify({ type: "set_session", session_id: sessionId }));
+      sendOrQueue(ws, { type: "set_session", session_id: sessionId });
     },
     reconnect() {
       safeClose();

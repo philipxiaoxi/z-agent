@@ -106,7 +106,7 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
           ),
           value: s.id,
         }))}
-        dropdownRender={(menu) => (
+        popupRender={(menu) => (
           <div>
             {menu}
             <div className="border-t border-gray-100 mt-1 pt-1 px-2">
