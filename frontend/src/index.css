@@ -7,3 +7,99 @@
   font-size: inherit;
   color: inherit;
 }
+
+/* SessionSelect 下拉框 */
+.session-select.ant-select {
+  min-width: 180px;
+}
+
+.session-select.ant-select .ant-select-selector {
+  border-radius: 8px !important;
+  border-color: #e5e7eb !important;
+  transition: all 0.2s;
+  background: #f9fafb !important;
+}
+
+.session-select.ant-select:hover .ant-select-selector {
+  border-color: #1677ff !important;
+  background: #f0f5ff !important;
+}
+
+.session-select.ant-select-focused .ant-select-selector {
+  border-color: #1677ff !important;
+  box-shadow: 0 0 0 2px rgba(22,119,255,0.1) !important;
+  background: #fff !important;
+}
+
+.session-select .ant-select-selection-item {
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.session-select-dropdown {
+  border-radius: 10px !important;
+  padding: 4px !important;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04) !important;
+}
+
+.session-select-dropdown .ant-select-item-option {
+  border-radius: 6px !important;
+  padding: 6px 8px !important;
+  margin-bottom: 1px;
+}
+
+.session-select-dropdown .ant-select-item-option-active {
+  background: #f5f5f5 !important;
+}
+
+.session-select-dropdown .ant-select-item-option-selected {
+  background: #f0f5ff !important;
+  font-weight: 400 !important;
+}
+
+.session-select-dropdown .ant-select-item-option .action-icons {
+  opacity: 0.3;
+  transition: opacity 0.15s;
+}
+
+.session-select-dropdown .ant-select-item-option:hover .action-icons {
+  opacity: 1;
+}
+
+.session-select-dropdown .ant-select-item-option-selected .action-icons {
+  opacity: 0.5;
+}
+
+.session-select-dropdown .ant-select-item-option-selected:hover .action-icons {
+  opacity: 1;
+}
+
+.session-select-dropdown .action-icon {
+  font-size: 13px;
+  padding: 3px;
+  border-radius: 4px;
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.session-select-dropdown .action-icon-edit {
+  color: #9ca3af !important;
+}
+
+.session-select-dropdown .action-icon-edit:hover {
+  color: #1677ff !important;
+  background: rgba(22,119,255,0.08);
+}
+
+.session-select-dropdown .action-icon-delete {
+  color: #f87168 !important;
+}
+
+.session-select-dropdown .action-icon-delete:hover {
+  color: #dc2626 !important;
+  background: rgba(220,38,38,0.08);
+}
+
+

@@ -4,8 +4,15 @@ import {
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { useChatStore } from "../../stores/chat-store";
+
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function SessionSelect({ loading }: { loading: boolean }) {
   const {
@@ -63,18 +70,22 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
     setRenamingId(null);
   }
 
+  const activeSession = sessions.find((s) => s.id === activeSessionId);
+
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        className="min-w-[160px]"
-        size="small"
-        placeholder="选择会话"
-        loading={sessionsLoading}
-        value={activeSessionId}
-        onChange={handleSelect}
-        disabled={loading}
-        options={sessions.map((s) => ({
-          label: s.id === renamingId ? (
+    <Select
+      className="session-select"
+      size="small"
+      placeholder="选择会话"
+      loading={sessionsLoading}
+      value={activeSessionId}
+      onChange={handleSelect}
+      disabled={loading}
+      classNames={{ popup: { root: "session-select-dropdown" } }}
+      labelRender={() => {
+        if (!activeSession) return <span>选择会话</span>;
+        if (activeSession.id === renamingId) {
+          return (
             <Input
               size="small"
               value={renameValue}
@@ -86,42 +97,67 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
               }}
               onClick={(e) => e.stopPropagation()}
               autoFocus
-              className="text-xs"
             />
-          ) : (
-            <div className="flex items-center justify-between group w-full">
-              <span className="truncate text-xs">{s.name}</span>
-              <span className="hidden group-hover:flex items-center gap-0.5 shrink-0">
-                <EditOutlined
-                  className="text-[11px] text-gray-400 hover:text-blue-500"
-                  onClick={(e) => startRename(e, s.id, s.name)}
-                />
-                <DeleteOutlined
-                  className="text-[11px] text-gray-400 hover:text-red-500"
-                  onClick={(e) => handleDelete(e, s.id)}
-                />
-              </span>
+          );
+        }
+        return <span className="truncate text-[13px]">{activeSession.name}</span>;
+      }}
+      options={sessions.map((s) => ({
+        label: s.id === renamingId ? (
+          <Input
+            size="small"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter") confirmRename();
+              if (e.key === "Escape") setRenamingId(null);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          />
+        ) : (
+          <div className="flex items-center gap-2 py-0.5">
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] leading-tight truncate">{s.name}</div>
+              <div className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-2">
+                <span>{formatTime(s.createdAt)}</span>
+                <span className="flex items-center gap-0.5">
+                  <MessageOutlined className="text-[10px]" />
+                  {s.messageCount}
+                </span>
+              </div>
             </div>
-          ),
-          value: s.id,
-        }))}
-        popupRender={(menu) => (
-          <div>
-            {menu}
-            <div className="border-t border-gray-100 mt-1 pt-1 px-2">
-              <Button
-                type="text"
-                size="small"
-                icon={<PlusOutlined />}
-                className="w-full text-xs text-left justify-start"
-                onClick={handleCreate}
-              >
-                新建会话
-              </Button>
-            </div>
+            <span className="action-icons flex items-center gap-2">
+              <EditOutlined
+                className="action-icon action-icon-edit"
+                onClick={(e) => startRename(e, s.id, s.name)}
+              />
+              <DeleteOutlined
+                className="action-icon action-icon-delete"
+                onClick={(e) => handleDelete(e, s.id)}
+              />
+            </span>
           </div>
-        )}
-      />
-    </div>
+        ),
+        value: s.id,
+      }))}
+      popupRender={(menu) => (
+        <div>
+          {menu}
+          <div className="border-t border-gray-100 mt-1 pt-1 px-2 pb-1">
+            <Button
+              type="text"
+              size="small"
+              icon={<PlusOutlined />}
+              className="w-full text-xs text-left justify-start text-gray-500 hover:text-blue-600"
+              onClick={handleCreate}
+            >
+              新建会话
+            </Button>
+          </div>
+        </div>
+      )}
+    />
   );
 }
