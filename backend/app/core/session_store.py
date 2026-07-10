@@ -92,30 +92,4 @@ def load_history(session_id: str) -> list[dict] | None:
     p = _path(session_id)
     if not p.exists():
         return None
-    data = json.loads(p.read_text())
-    history = data.get("llm_history")
-    if history is not None:
-        return history
-    # 兼容旧文件：从 rich messages 重建
-    messages = data.get("messages", [])
-    if not messages:
-        return None
-    result: list[dict] = []
-    for m in messages:
-        if m["role"] == "user":
-            texts = [b["content"] for b in m["blocks"] if b["type"] == "text"]
-            if texts:
-                result.append({"role": "user", "content": "\n".join(texts)})
-        elif m["role"] == "assistant":
-            parts = []
-            for b in m["blocks"]:
-                if b["type"] == "text":
-                    parts.append(b["content"])
-                elif b["type"] == "tool_call":
-                    parts.append(f"\n[调用工具: {b['tool']}]\n参数: {json.dumps(b['args'], ensure_ascii=False)}")
-                elif b["type"] == "tool_result":
-                    parts.append(f"返回: {b['result']}\n")
-            content = "\n".join(parts).strip()
-            if content:
-                result.append({"role": "assistant", "content": content})
-    return result if result else None
+    return json.loads(p.read_text()).get("llm_history")
