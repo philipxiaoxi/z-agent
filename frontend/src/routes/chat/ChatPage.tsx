@@ -16,10 +16,16 @@ import { useChatWs } from "../../hooks/useChatWs";
 const { Text } = Typography;
 const CHAT_MAX_WIDTH = 720;
 
+interface PoolOption {
+  name: string;
+  display_name?: string;
+}
+
 export default function ChatPage() {
   const { messages, workdir, addMessage, setWorkdir } = useChatStore();
   const { wsStatus, loading, setLoading, handleSend, handleSetWorkdir, handleReconnect } = useChatWs();
   const [input, setInput] = useState("");
+  const [pools, setPools] = useState<PoolOption[]>([]);
 
   function onNavigate(path: string) {
     const text = `查看 ${path} 的内容`;
@@ -39,8 +45,22 @@ export default function ChatPage() {
       }
     }, 100);
   }
+
   const [editingWorkdir, setEditingWorkdir] = useState(false);
   const [workdirInput, setWorkdirInput] = useState("");
+
+  useEffect(() => {
+    if (editingWorkdir && pools.length === 0) {
+      fetch("/api/pools/")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.pools && data.pools.length > 0) {
+            setPools(data.pools.map((p: { name: string; display_name?: string }) => ({ name: p.name, display_name: p.display_name })));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [editingWorkdir]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => {
     const len = messages.length;
@@ -171,23 +191,43 @@ export default function ChatPage() {
       <div className="px-4 py-3 bg-white border-t border-gray-100 shrink-0">
         <div style={{ maxWidth: CHAT_MAX_WIDTH }} className="mx-auto">
           {editingWorkdir ? (
-            <div className="flex items-center gap-2 mb-2">
-              <FolderOutlined className="text-gray-400 text-sm shrink-0" />
-              <Input
-                size="small"
-                value={workdirInput}
-                onChange={(e) => setWorkdirInput(e.target.value)}
-                onKeyDown={onWorkdirKeyDown}
-                placeholder="/sata12/my/data"
-                className="text-xs"
-                autoFocus
-              />
-              <Button size="small" type="primary" onClick={confirmWorkdir} className="text-xs">
-                确认
-              </Button>
-              <Button size="small" onClick={() => setEditingWorkdir(false)} className="text-xs">
-                取消
-              </Button>
+            <div className="mb-2">
+              <div className="flex items-center gap-2 mb-1.5">
+                <FolderOutlined className="text-gray-400 text-sm shrink-0" />
+                <Input
+                  size="small"
+                  value={workdirInput}
+                  onChange={(e) => setWorkdirInput(e.target.value)}
+                  onKeyDown={onWorkdirKeyDown}
+                  placeholder="/sata12/my/data"
+                  className="text-xs"
+                  autoFocus
+                />
+                <Button size="small" type="primary" onClick={confirmWorkdir} className="text-xs">
+                  确认
+                </Button>
+                <Button size="small" onClick={() => setEditingWorkdir(false)} className="text-xs">
+                  取消
+                </Button>
+              </div>
+              {pools.length > 0 && (
+                <div className="flex items-center gap-1.5 pl-[22px]">
+                  <span className="text-[11px] text-gray-400 shrink-0">快速选择：</span>
+                  {pools.map((pool) => (
+                    <span
+                      key={pool.name}
+                      className={`text-xs px-2 py-0.5 rounded cursor-pointer border ${
+                        workdirInput === `/${pool.name}/`
+                          ? "bg-blue-50 border-blue-300 text-blue-600"
+                          : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"
+                      }`}
+                      onClick={() => setWorkdirInput(`/${pool.name}/my/data`)}
+                    >
+                      {pool.display_name || pool.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ) : workdir ? (
             <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded bg-gray-50 text-xs text-gray-500 cursor-pointer hover:bg-gray-100" onClick={startEditWorkdir}>
