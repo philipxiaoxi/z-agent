@@ -11,6 +11,7 @@ import {
 import type { Block } from "../../stores/chat-store";
 import { useChatStore } from "../../stores/chat-store";
 import FileListBlock from "./FileListBlock";
+import HtmlPreviewBlock from "./HtmlPreviewBlock";
 
 const CODE_FONT = '"SF Mono", "Monaco", "Cascadia Code", monospace';
 
@@ -93,6 +94,14 @@ export default memo(function BlockView({ block, onFileAction }: BlockViewProps) 
           collapsed={block.collapsed}
           blockId={block.id}
           onFileAction={onFileAction}
+        />
+      );
+    case "html_preview":
+      return (
+        <HtmlPreviewBlock
+          htmlPreview={block.htmlPreview!}
+          collapsed={block.collapsed}
+          blockId={block.id}
         />
       );
     default:

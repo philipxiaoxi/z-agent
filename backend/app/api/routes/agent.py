@@ -42,7 +42,8 @@ async def agent_ws(ws: WebSocket):
             confirm_mgr, workdir_ctx=ctx,
             on_workdir_changed=_on_workdir_changed,
             send_to_frontend=lambda d: (
-                segments.append({"type": "file_list", "data": d["data"]}) if d.get("type") == "file_list" else None,
+                segments.append({"type": d["type"], "data": d["data"]})
+                if d.get("type") in ("file_list", "html_preview") else None,
                 asyncio.ensure_future(_send(ws, d)),
             ),
         )
@@ -214,7 +215,7 @@ async def agent_ws(ws: WebSocket):
 
                 if not session_id:
                     continue
-                if not full_response and not any(s["type"] in ("tool_call", "tool_result", "file_list") for s in segments):
+                if not full_response and not any(s["type"] in ("tool_call", "tool_result", "file_list", "html_preview") for s in segments):
                     continue
 
                 # 合并连续文本片段
@@ -237,6 +238,8 @@ async def agent_ws(ws: WebSocket):
                         blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
                     elif seg["type"] == "file_list":
                         blocks.append({"id": str(uuid4()), "type": "file_list", "fileList": seg["data"], "collapsed": False})
+                    elif seg["type"] == "html_preview":
+                        blocks.append({"id": str(uuid4()), "type": "html_preview", "htmlPreview": seg.get("data", {}), "collapsed": True})
 
                 # 构建 LLM 消息（标准 tool 格式）
                 llm_msgs: list[dict] = []

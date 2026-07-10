@@ -9,6 +9,7 @@ from .confirm import ConfirmManager
 from .zcli_mcp_wrapper import ZcliMCPWrapper
 from .set_workdir import make_set_workdir_tool
 from .show_directory import make_show_directory_tool
+from .show_html_preview import make_show_html_preview_tool
 
 
 async def get_tools(
@@ -28,6 +29,7 @@ async def get_tools(
     local_tools = [
         make_set_workdir_tool(confirm_mgr, on_workdir_changed=_on_set_workdir),
         make_show_directory_tool(send_to_frontend),
+        make_show_html_preview_tool(send_to_frontend),
     ]
 
     logger = logging.getLogger(__name__)
