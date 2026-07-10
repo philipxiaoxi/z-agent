@@ -21,3 +21,4 @@ dist/
 
 # Session data
 data/sessions/
+backend/data/

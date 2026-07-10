@@ -37,14 +37,12 @@ async def agent_ws(ws: WebSocket):
         ctx.workdir = path
         await _send(ws, {"type": "workdir_changed", "path": path})
 
-    _file_list_buf: list[dict] = []
-
     try:
         tools = await get_tools(
             confirm_mgr, workdir_ctx=ctx,
             on_workdir_changed=_on_workdir_changed,
             send_to_frontend=lambda d: (
-                _file_list_buf.append(d) if d.get("type") == "file_list" else None,
+                segments.append({"type": "file_list", "data": d["data"]}) if d.get("type") == "file_list" else None,
                 asyncio.ensure_future(_send(ws, d)),
             ),
         )
@@ -211,11 +209,6 @@ async def agent_ws(ws: WebSocket):
                 if text_buf:
                     segments.append({"type": "text", "content": text_buf})
                     await _send(ws, {"type": "text", "content": text_buf})
-
-                for fl in _file_list_buf:
-                    if fl.get("type") == "file_list":
-                        segments.append({"type": "file_list", "data": fl["data"]})
-                _file_list_buf.clear()
 
                 await _send(ws, {"type": "done"})
 
