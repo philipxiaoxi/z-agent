@@ -116,6 +116,12 @@ async def agent_ws(ws: WebSocket):
 
                 text_buf = ""
                 full_response = ""
+                segments: list[dict] = []
+
+                def _flush_text() -> None:
+                    nonlocal text_buf
+                    if text_buf:
+                        segments.append({"type": "text", "content": text_buf})
 
                 async for event in agent.arun(
                     ctx.get_history(),
@@ -127,10 +133,12 @@ async def agent_ws(ws: WebSocket):
 
                     if et in ("ToolCallStarted",):
                         if text_buf:
+                            _flush_text()
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
                         tool = getattr(event, "tool", None)
                         if tool:
+                            segments.append({"type": "tool_call", "tool": tool.tool_name or "", "args": tool.tool_args or {}})
                             await _send(ws, {
                                 "type": "tool_start",
                                 "id": tool.tool_call_id or str(uuid4()),
@@ -140,6 +148,7 @@ async def agent_ws(ws: WebSocket):
 
                     elif et in ("ToolCallCompleted",):
                         if text_buf:
+                            _flush_text()
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
                         tool = getattr(event, "tool", None)
@@ -149,6 +158,7 @@ async def agent_ws(ws: WebSocket):
                                 result = json.dumps(result, ensure_ascii=False, indent=2)
                             else:
                                 result = str(result) if result is not None else ""
+                            segments.append({"type": "tool_result", "tool": tool.tool_name or "", "result": result})
                             await _send(ws, {
                                 "type": "tool_result",
                                 "id": tool.tool_call_id or str(uuid4()),
@@ -158,15 +168,18 @@ async def agent_ws(ws: WebSocket):
 
                     elif et == "ToolCallError":
                         if text_buf:
+                            _flush_text()
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
                         tool = getattr(event, "tool", None)
                         if tool:
+                            err = f"错误: {tool.tool_call_error}"
+                            segments.append({"type": "tool_result", "tool": tool.tool_name or "", "result": err})
                             await _send(ws, {
                                 "type": "tool_result",
                                 "id": tool.tool_call_id or str(uuid4()),
                                 "tool": tool.tool_name or "",
-                                "result": f"错误: {tool.tool_call_error}",
+                                "result": err,
                             })
 
                     elif et == "RunError":
@@ -184,10 +197,12 @@ async def agent_ws(ws: WebSocket):
                             text_buf += str(chunk)
                             full_response += str(chunk)
                             if "\n" in text_buf or len(text_buf) >= 2:
+                                segments.append({"type": "text", "content": text_buf})
                                 await _send(ws, {"type": "text", "content": text_buf})
                                 text_buf = ""
 
                 if text_buf:
+                    segments.append({"type": "text", "content": text_buf})
                     await _send(ws, {"type": "text", "content": text_buf})
 
                 if full_response:
@@ -195,20 +210,20 @@ async def agent_ws(ws: WebSocket):
 
                 await _send(ws, {"type": "done"})
 
-                # AI 输出完毕后才写入 session store
-                if session_id:
-                    user_msg = {
-                        "id": str(uuid4()),
-                        "role": "user",
-                        "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}],
-                    }
-                    assistant_msg = {
-                        "id": str(uuid4()),
-                        "role": "assistant",
-                        "blocks": [{"id": str(uuid4()), "type": "text", "content": full_response, "collapsed": False}],
-                    }
-                    if full_response:
-                        session_store.append_messages(session_id, [user_msg, assistant_msg])
+                # AI 输出完毕后将 segments 转为 blocks 写入 session store
+                if session_id and full_response:
+                    blocks: list[dict] = []
+                    for seg in segments:
+                        if seg["type"] == "text":
+                            blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
+                        elif seg["type"] == "tool_call":
+                            blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
+                        elif seg["type"] == "tool_result":
+                            blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
+                    session_store.append_messages(session_id, [
+                        {"id": str(uuid4()), "role": "user", "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}]},
+                        {"id": str(uuid4()), "role": "assistant", "blocks": blocks},
+                    ])
 
             elif msg_type == "confirm":
                 confirm_mgr.resolve(data["id"], data.get("approved", False))
