@@ -26,25 +26,10 @@ async def _send(ws: WebSocket, data: dict) -> None:
     await ws.send_text(json.dumps(data, ensure_ascii=False))
 
 
-def _make_send_to_frontend(ws: WebSocket, file_list_collector: list[dict]):
-    """创建 send_to_frontend 回调，同时收集 file_list 事件用于持久化"""
-    def _send_and_collect(data: dict):
-        asyncio.ensure_future(_send(ws, data))
-        if data.get("type") == "file_list":
-            file_list_collector.append({
-                "id": str(uuid4()),
-                "type": "file_list",
-                "fileList": data.get("data"),
-                "collapsed": False,
-            })
-    return _send_and_collect
-
-
 @router.websocket("/ws")
 async def agent_ws(ws: WebSocket):
     await ws.accept()
     ctx = ConversationContext()
-    file_list_collector: list[dict] = []
 
     confirm_mgr = ConfirmManager(lambda d: asyncio.ensure_future(_send(ws, d)))
 
@@ -56,7 +41,7 @@ async def agent_ws(ws: WebSocket):
         tools = await get_tools(
             confirm_mgr, workdir_ctx=ctx,
             on_workdir_changed=_on_workdir_changed,
-            send_to_frontend=_make_send_to_frontend(ws, file_list_collector),
+            send_to_frontend=lambda d: asyncio.ensure_future(_send(ws, d)),
         )
         logger.info("agent tools: %s", [t.name for t in tools])
     except Exception as e:
@@ -124,20 +109,11 @@ async def agent_ws(ws: WebSocket):
                     ctx.restore_history(_session_histories.get(session_id, []))
                     ctx.session_id = session_id
 
-                # 构建用户消息（rich 格式用于持久化）
-                user_msg = {
-                    "id": str(uuid4()),
-                    "role": "user",
-                    "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}],
-                }
-
                 user_content_for_llm = user_content
                 if ctx.workdir:
                     user_content_for_llm = f"[当前工作目录：{ctx.workdir}]\n{user_content}"
                 ctx.add_user(user_content_for_llm)
 
-                file_list_collector.clear()
-                assistant_blocks: list[dict] = []
                 text_buf = ""
                 full_response = ""
 
@@ -151,7 +127,6 @@ async def agent_ws(ws: WebSocket):
 
                     if et in ("ToolCallStarted",):
                         if text_buf:
-                            assistant_blocks.append({"id": str(uuid4()), "type": "text", "content": text_buf, "collapsed": False})
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
                         tool = getattr(event, "tool", None)
@@ -162,17 +137,9 @@ async def agent_ws(ws: WebSocket):
                                 "tool": tool.tool_name or "",
                                 "args": tool.tool_args or {},
                             })
-                            assistant_blocks.append({
-                                "id": str(uuid4()),
-                                "type": "tool_call",
-                                "tool": tool.tool_name or "",
-                                "args": tool.tool_args or {},
-                                "collapsed": True,
-                            })
 
                     elif et in ("ToolCallCompleted",):
                         if text_buf:
-                            assistant_blocks.append({"id": str(uuid4()), "type": "text", "content": text_buf, "collapsed": False})
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
                         tool = getattr(event, "tool", None)
@@ -188,17 +155,9 @@ async def agent_ws(ws: WebSocket):
                                 "tool": tool.tool_name or "",
                                 "result": result,
                             })
-                            assistant_blocks.append({
-                                "id": str(uuid4()),
-                                "type": "tool_result",
-                                "tool": tool.tool_name or "",
-                                "result": result,
-                                "collapsed": True,
-                            })
 
                     elif et == "ToolCallError":
                         if text_buf:
-                            assistant_blocks.append({"id": str(uuid4()), "type": "text", "content": text_buf, "collapsed": False})
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
                         tool = getattr(event, "tool", None)
@@ -208,13 +167,6 @@ async def agent_ws(ws: WebSocket):
                                 "id": tool.tool_call_id or str(uuid4()),
                                 "tool": tool.tool_name or "",
                                 "result": f"错误: {tool.tool_call_error}",
-                            })
-                            assistant_blocks.append({
-                                "id": str(uuid4()),
-                                "type": "tool_result",
-                                "tool": tool.tool_name or "",
-                                "result": f"错误: {tool.tool_call_error}",
-                                "collapsed": True,
                             })
 
                     elif et == "RunError":
@@ -232,12 +184,10 @@ async def agent_ws(ws: WebSocket):
                             text_buf += str(chunk)
                             full_response += str(chunk)
                             if "\n" in text_buf or len(text_buf) >= 2:
-                                assistant_blocks.append({"id": str(uuid4()), "type": "text", "content": text_buf, "collapsed": False})
                                 await _send(ws, {"type": "text", "content": text_buf})
                                 text_buf = ""
 
                 if text_buf:
-                    assistant_blocks.append({"id": str(uuid4()), "type": "text", "content": text_buf, "collapsed": False})
                     await _send(ws, {"type": "text", "content": text_buf})
 
                 if full_response:
@@ -245,11 +195,20 @@ async def agent_ws(ws: WebSocket):
 
                 await _send(ws, {"type": "done"})
 
-                # 写入 session store
-                assistant_blocks.extend(file_list_collector)
-                messages_to_save = [user_msg, {"id": str(uuid4()), "role": "assistant", "blocks": assistant_blocks}]
-                if session_id and (messages_to_save[0]["blocks"] or messages_to_save[1]["blocks"]):
-                    session_store.append_messages(session_id, messages_to_save)
+                # AI 输出完毕后才写入 session store
+                if session_id:
+                    user_msg = {
+                        "id": str(uuid4()),
+                        "role": "user",
+                        "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}],
+                    }
+                    assistant_msg = {
+                        "id": str(uuid4()),
+                        "role": "assistant",
+                        "blocks": [{"id": str(uuid4()), "type": "text", "content": full_response, "collapsed": False}],
+                    }
+                    if full_response:
+                        session_store.append_messages(session_id, [user_msg, assistant_msg])
 
             elif msg_type == "confirm":
                 confirm_mgr.resolve(data["id"], data.get("approved", False))
