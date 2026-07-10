@@ -100,7 +100,12 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
             />
           );
         }
-        return <span className="truncate text-[13px]">{activeSession.name}</span>;
+        return (
+  <span className="truncate text-[13px] flex items-center gap-1.5">
+    <MessageOutlined className="text-[11px]" />
+    {activeSession.name}
+  </span>
+);
       }}
       options={sessions.map((s) => ({
         label: s.id === renamingId ? (
