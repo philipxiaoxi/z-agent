@@ -48,7 +48,7 @@ class ZcliMCPWrapper:
         return wrapped
 
     def _build_entrypoint(self, name: str, original: Callable) -> Callable:
-        async def wrapped(**kwargs: Any) -> str:
+        async def wrapped(**kwargs: Any) -> object:
             path = _extract_path(kwargs)
             wd = self._ctx.workdir if self._ctx else ""
             logger.info("gate check: tool=%s path=%s workdir=%s", name, path, wd)
@@ -67,7 +67,8 @@ class ZcliMCPWrapper:
                 self._confirm.cleanup(cid)
                 if not approved:
                     return f"❌ 操作已拒绝：{reason}"
-            return await original(**kwargs)
+            result = await original(**kwargs)
+            return result
         return wrapped
 
 

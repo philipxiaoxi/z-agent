@@ -53,7 +53,7 @@ def make_show_directory_tool(send_to_frontend: Callable[[dict], None] | None = N
                 "data": file_list_data,
             })
 
-        return f"📁 {path} — {total_str}"
+        return f"前端已展示目录：{path}的内容，共{total_str}。"
 
     return Function(
         name="show_directory",
