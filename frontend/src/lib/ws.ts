@@ -41,9 +41,10 @@ export interface WsEvents {
 }
 
 export interface ChatWs {
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string, sessionId?: string) => void;
   sendConfirm: (id: string, approved: boolean) => void;
   sendSetWorkdir: (path: string) => void;
+  sendSetSession: (sessionId: string) => void;
   reconnect: () => void;
   close: () => void;
 }
@@ -135,18 +136,23 @@ export function createChatWs(events: WsEvents): ChatWs {
   connect();
 
   return {
-    sendMessage(text: string) {
+    sendMessage(text: string, sessionId?: string) {
       if (ws.readyState !== WebSocket.OPEN) {
         events.onError("WebSocket 未连接");
         return;
       }
-      ws.send(JSON.stringify({ type: "message", content: text }));
+      const payload: Record<string, unknown> = { type: "message", content: text };
+      if (sessionId) payload.session_id = sessionId;
+      ws.send(JSON.stringify(payload));
     },
     sendConfirm(id: string, approved: boolean) {
       ws.send(JSON.stringify({ type: "confirm", id, approved }));
     },
     sendSetWorkdir(path: string) {
       ws.send(JSON.stringify({ type: "set_workdir", path }));
+    },
+    sendSetSession(sessionId: string) {
+      ws.send(JSON.stringify({ type: "set_session", session_id: sessionId }));
     },
     reconnect() {
       safeClose();

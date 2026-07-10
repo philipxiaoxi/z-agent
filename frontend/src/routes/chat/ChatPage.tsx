@@ -11,6 +11,7 @@ import {
 import { useChatStore } from "../../stores/chat-store";
 import BlockView, { STATUS_META, type StatusKey } from "../../components/chat/BlockView";
 import WelcomeCard from "../../components/chat/WelcomeCard";
+import SessionSelect from "../../components/chat/SessionSelect";
 import { useChatWs } from "../../hooks/useChatWs";
 
 const { Text } = Typography;
@@ -22,7 +23,7 @@ interface PoolOption {
 }
 
 export default function ChatPage() {
-  const { messages, workdir, addMessage, setWorkdir } = useChatStore();
+  const { messages, workdir, messagesLoading, addMessage, setWorkdir } = useChatStore();
   const { wsStatus, loading, setLoading, handleSend, handleSetWorkdir, handleReconnect } = useChatWs();
   const [input, setInput] = useState("");
   const [pools, setPools] = useState<PoolOption[]>([]);
@@ -30,7 +31,6 @@ export default function ChatPage() {
   function onNavigate(path: string) {
     const text = `查看 ${path} 的内容`;
     setInput(text);
-    // Auto-send after short delay for better UX
     setTimeout(() => {
       if (!loading) {
         setInput("");
@@ -61,6 +61,7 @@ export default function ChatPage() {
         .catch(() => {});
     }
   }, [editingWorkdir]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollKey = useMemo(() => {
     const len = messages.length;
@@ -128,6 +129,7 @@ export default function ChatPage() {
   }
 
   const emptyState = useMemo(() => <WelcomeCard />, []);
+  const showWelcome = messages.length === 0 && !messagesLoading;
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
@@ -137,18 +139,26 @@ export default function ChatPage() {
           <Text strong className="text-[15px]">极同学</Text>
           <span className="text-xs text-gray-400">你的 NAS AI 助手</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: statusMeta?.color ?? "#ff4d4f" }} />
-          <Text className="text-xs text-gray-400">{statusMeta?.label ?? "未连接"}</Text>
-          {wsStatus === "disconnected" && (
-            <Button size="small" type="text" icon={<ReloadOutlined />} onClick={handleReconnect} className="text-xs text-gray-400" />
-          )}
+        <div className="flex items-center gap-3">
+          <SessionSelect loading={loading} />
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: statusMeta?.color ?? "#ff4d4f" }} />
+            <Text className="text-xs text-gray-400">{statusMeta?.label ?? "未连接"}</Text>
+            {wsStatus === "disconnected" && (
+              <Button size="small" type="text" icon={<ReloadOutlined />} onClick={handleReconnect} className="text-xs text-gray-400" />
+            )}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-8 flex flex-col items-center">
         <div className="w-full flex flex-col gap-5" style={{ maxWidth: CHAT_MAX_WIDTH }}>
-          {messages.length === 0 && emptyState}
+          {showWelcome && emptyState}
+          {messagesLoading && messages.length === 0 && (
+            <div className="flex justify-center p-20">
+              <Spin />
+            </div>
+          )}
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -217,7 +227,7 @@ export default function ChatPage() {
                     <span
                       key={pool.name}
                       className={`text-xs px-2 py-0.5 rounded cursor-pointer border ${
-                        workdirInput === `/${pool.name}/`
+                        workdirInput === `/${pool.name}/my/data`
                           ? "bg-blue-50 border-blue-300 text-blue-600"
                           : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"
                       }`}

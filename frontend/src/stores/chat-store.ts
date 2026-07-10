@@ -32,16 +32,38 @@ export interface Message {
   blocks: Block[];
 }
 
+export interface SessionSummary {
+  id: string;
+  name: string;
+  createdAt: number;
+  messageCount: number;
+}
+
 interface ChatState {
+  sessions: SessionSummary[];
+  activeSessionId: string | null;
   messages: Message[];
-  workdir: string;
+  sessionsLoading: boolean;
+  messagesLoading: boolean;
+  storeReady: boolean;
+
+  fetchSessions: () => Promise<void>;
+  ensureOneSession: () => Promise<string | null>;
+  createSession: () => Promise<string | null>;
+  deleteSession: (id: string) => Promise<void>;
+  renameSession: (id: string, name: string) => Promise<void>;
+  switchSession: (id: string) => Promise<void>;
+
   addMessage: (msg: Message) => void;
   appendText: (chunk: string) => void;
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
   addFileList: (data: FileListData) => void;
   toggleBlockCollapsed: (blockId: string) => void;
+
+  workdir: string;
   setWorkdir: (path: string) => void;
+
   clear: () => void;
 }
 
@@ -78,11 +100,99 @@ function saveWorkdir(path: string) {
   }
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
+  sessions: [],
+  activeSessionId: null,
   messages: [],
+  sessionsLoading: false,
+  messagesLoading: false,
+  storeReady: false,
   workdir: loadWorkdir(),
 
-  addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+  fetchSessions: async () => {
+    set({ sessionsLoading: true });
+    try {
+      const res = await fetch("/api/sessions/");
+      const data = await res.json();
+      set({ sessions: data.sessions ?? [], sessionsLoading: false, storeReady: true });
+    } catch {
+      set({ sessionsLoading: false, storeReady: true });
+    }
+  },
+
+  ensureOneSession: async () => {
+    const { sessions } = get();
+    if (sessions.length > 0) return null;
+    const id = await get().createSession();
+    return id;
+  },
+
+  createSession: async () => {
+    try {
+      const res = await fetch("/api/sessions/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const session = await res.json();
+      await get().fetchSessions();
+      return session.id;
+    } catch {
+      return null;
+    }
+  },
+
+  deleteSession: async (id: string) => {
+    try {
+      await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+      const { activeSessionId } = get();
+      await get().fetchSessions();
+      if (activeSessionId === id) {
+        const { sessions } = get();
+        if (sessions.length > 0) {
+          get().switchSession(sessions[0].id);
+        } else {
+          set({ activeSessionId: null, messages: [] });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  },
+
+  renameSession: async (id: string, name: string) => {
+    try {
+      await fetch(`/api/sessions/${id}/name`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      set((s) => ({
+        sessions: s.sessions.map((se) => (se.id === id ? { ...se, name } : se)),
+      }));
+    } catch {
+      // ignore
+    }
+  },
+
+  switchSession: async (id: string) => {
+    if (id === get().activeSessionId) return;
+    set({ messagesLoading: true });
+    try {
+      const res = await fetch(`/api/sessions/${id}`);
+      const data = await res.json();
+      set({
+        activeSessionId: id,
+        messages: data.messages ?? [],
+        messagesLoading: false,
+      });
+    } catch {
+      set({ messages: [], messagesLoading: false, activeSessionId: id });
+    }
+  },
+
+  addMessage: (msg) =>
+    set((s) => ({ messages: [...s.messages, msg] })),
 
   appendText: (chunk) =>
     set((s) => {

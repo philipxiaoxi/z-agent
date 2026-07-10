@@ -30,6 +30,9 @@ class ConversationContext:
     def clear(self) -> None:
         self._messages.clear()
 
+    def restore_history(self, messages: list[dict]) -> None:
+        self._messages = list(messages)
+
     def _trim(self) -> None:
         max_n = self._max_turns * 2
         if len(self._messages) > max_n:

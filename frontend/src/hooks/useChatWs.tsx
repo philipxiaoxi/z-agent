@@ -11,10 +11,13 @@ import {
 import { useChatStore } from "../stores/chat-store";
 
 export function useChatWs() {
-  const { appendText, addToolCall, addToolResult, addFileList, setWorkdir } = useChatStore();
+  const { appendText, addToolCall, addToolResult, addFileList, setWorkdir, activeSessionId } = useChatStore();
   const [loading, setLoading] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const wsRef = useRef<ChatWs | null>(null);
+  const sessionIdRef = useRef(activeSessionId);
+
+  sessionIdRef.current = activeSessionId;
 
   useEffect(() => {
     const ws = createChatWs({
@@ -56,12 +59,16 @@ export function useChatWs() {
     });
     wsRef.current = ws;
     return () => ws.close();
-    }, [appendText, addToolCall, addToolResult, addFileList, setWorkdir]);
+  }, [appendText, addToolCall, addToolResult, addFileList, setWorkdir]);
+
+  useEffect(() => {
+    wsRef.current?.sendSetSession(activeSessionId ?? "");
+  }, [activeSessionId]);
 
   const handleSend = useCallback(
     (text: string) => {
       if (!wsRef.current) return;
-      wsRef.current.sendMessage(text);
+      wsRef.current.sendMessage(text, sessionIdRef.current ?? undefined);
     },
     []
   );
