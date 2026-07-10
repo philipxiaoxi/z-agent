@@ -232,6 +232,7 @@ async def agent_ws(ws: WebSocket):
                             text_buf += str(chunk)
                             full_response += str(chunk)
                             if "\n" in text_buf or len(text_buf) >= 2:
+                                assistant_blocks.append({"id": str(uuid4()), "type": "text", "content": text_buf, "collapsed": False})
                                 await _send(ws, {"type": "text", "content": text_buf})
                                 text_buf = ""
 
