@@ -20,6 +20,10 @@ class ConversationContext:
         self._messages.append({"role": "assistant", "content": content})
         self._trim()
 
+    def append_messages(self, messages: list[dict]) -> None:
+        self._messages.extend(messages)
+        self._trim()
+
     def get_history(self) -> list[dict]:
         return list(self._messages)
 
@@ -34,6 +38,11 @@ class ConversationContext:
         self._messages = list(messages)
 
     def _trim(self) -> None:
-        max_n = self._max_turns * 2
-        if len(self._messages) > max_n:
-            self._messages = self._messages[-max_n:]
+        if len(self._messages) <= self._max_turns * 6:
+            return
+        # 按整轮（user 消息为界）切除最早的历史
+        user_indices = [i for i, m in enumerate(self._messages) if m.get("role") == "user"]
+        while user_indices and len(self._messages) - user_indices[0] > self._max_turns * 6:
+            end = user_indices[1] if len(user_indices) > 1 else len(self._messages)
+            self._messages = self._messages[end:]
+            user_indices = [i for i, m in enumerate(self._messages) if m.get("role") == "user"]

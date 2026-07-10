@@ -214,7 +214,7 @@ async def agent_ws(ws: WebSocket):
                 if not full_response and not any(s["type"] in ("tool_call", "tool_result") for s in segments):
                     continue
 
-                # 合并连续文本片段，避免流式拆碎
+                # 合并连续文本片段
                 merged: list[dict] = []
                 for seg in segments:
                     if seg["type"] == "text" and merged and merged[-1]["type"] == "text":
@@ -222,26 +222,55 @@ async def agent_ws(ws: WebSocket):
                     else:
                         merged.append(seg)
 
-                # 从 merged 重建 blocks（给前端），以及 llm_content（给 ctx，含工具信息）
+                # 重建 blocks（给前端展示）
                 blocks: list[dict] = []
-                llm_parts: list[str] = []
-
                 for seg in merged:
                     if seg["type"] == "text":
                         if seg["content"].strip():
                             blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
-                            llm_parts.append(seg["content"])
                     elif seg["type"] == "tool_call":
                         blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
-                        llm_parts.append(f"\n[调用工具: {seg['tool']}]\n参数: {json.dumps(seg['args'], ensure_ascii=False)}")
                     elif seg["type"] == "tool_result":
                         blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
-                        llm_parts.append(f"返回: {seg['result']}\n")
 
-                llm_content = "\n".join(llm_parts).strip()
-                ctx.add_assistant(llm_content)
-                _session_histories[ctx.session_id] = ctx.get_history()
-                session_store.save_history(ctx.session_id, ctx.get_history())
+                # 构建 LLM 消息（标准 tool 格式）
+                llm_msgs: list[dict] = []
+                pending_text = ""
+                for seg in merged:
+                    if seg["type"] == "text":
+                        pending_text += seg["content"]
+                    elif seg["type"] == "tool_call":
+                        if pending_text.strip():
+                            llm_msgs.append({"role": "assistant", "content": pending_text.strip()})
+                            pending_text = ""
+                        call_id = f"call_{uuid4().hex[:8]}"
+                        llm_msgs.append({
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [{
+                                "id": call_id,
+                                "type": "function",
+                                "function": {
+                                    "name": seg["tool"],
+                                    "arguments": json.dumps(seg["args"], ensure_ascii=False),
+                                },
+                            }],
+                        })
+                    elif seg["type"] == "tool_result":
+                        call_id = llm_msgs[-1]["tool_calls"][0]["id"] if llm_msgs and llm_msgs[-1].get("tool_calls") else f"call_{uuid4().hex[:8]}"
+                        llm_msgs.append({
+                            "role": "tool",
+                            "tool_call_id": call_id,
+                            "content": seg["result"],
+                            "name": seg["tool"],
+                        })
+                if pending_text.strip():
+                    llm_msgs.append({"role": "assistant", "content": pending_text.strip()})
+
+                if llm_msgs:
+                    ctx.append_messages(llm_msgs)
+                    _session_histories[ctx.session_id] = ctx.get_history()
+                    session_store.save_history(ctx.session_id, ctx.get_history())
 
                 # 写入 session store
                 session_store.append_messages(session_id, [
