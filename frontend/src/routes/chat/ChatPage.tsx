@@ -22,7 +22,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
 
   function onNavigate(path: string) {
-    const text = `列出 ${path} 的内容`;
+    const text = `查看 ${path} 的内容`;
     setInput(text);
     // Auto-send after short delay for better UX
     setTimeout(() => {

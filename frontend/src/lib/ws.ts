@@ -81,6 +81,10 @@ export function createChatWs(events: WsEvents): ChatWs {
 
     ws.onopen = () => {
       events.onStatusChange("connected");
+      const saved = localStorage.getItem("zspace_workdir");
+      if (saved) {
+        ws.send(JSON.stringify({ type: "restore_workdir", path: saved }));
+      }
     };
 
     ws.onmessage = (e) => {

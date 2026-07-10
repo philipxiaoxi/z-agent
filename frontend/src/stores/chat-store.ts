@@ -56,9 +56,31 @@ function withNewBlock(s: ChatState, block: Block): Partial<ChatState> {
   };
 }
 
+const WORKDIR_KEY = "zspace_workdir";
+
+function loadWorkdir(): string {
+  try {
+    return localStorage.getItem(WORKDIR_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function saveWorkdir(path: string) {
+  try {
+    if (path) {
+      localStorage.setItem(WORKDIR_KEY, path);
+    } else {
+      localStorage.removeItem(WORKDIR_KEY);
+    }
+  } catch {
+    // localStorage 不可用时静默失败
+  }
+}
+
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
-  workdir: "",
+  workdir: loadWorkdir(),
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
 
@@ -131,7 +153,13 @@ export const useChatStore = create<ChatState>((set) => ({
       })),
     })),
 
-  setWorkdir: (path) => set({ workdir: path }),
+  setWorkdir: (path) => {
+    saveWorkdir(path);
+    set({ workdir: path });
+  },
 
-  clear: () => set({ messages: [], workdir: "" }),
+  clear: () => {
+    saveWorkdir("");
+    set({ messages: [], workdir: "" });
+  },
 }));
