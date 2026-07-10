@@ -1,4 +1,6 @@
 import { memo } from "react";
+import { Dropdown } from "antd";
+import type { MenuProps } from "antd";
 import {
   FolderOutlined,
   FileTextOutlined,
@@ -12,6 +14,9 @@ import {
   DownOutlined,
   RightOutlined,
   InboxOutlined,
+  SearchOutlined,
+  EyeOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import type { FileListData, FileItem } from "../../stores/chat-store";
 import { useChatStore } from "../../stores/chat-store";
@@ -82,10 +87,10 @@ interface Props {
   fileList: FileListData;
   collapsed: boolean;
   blockId: string;
-  onNavigate?: (path: string) => void;
+  onFileAction?: (action: "analyze" | "view" | "add_to_input", path: string) => void;
 }
 
-export default memo(function FileListBlock({ fileList, collapsed, blockId, onNavigate }: Props) {
+export default memo(function FileListBlock({ fileList, collapsed, blockId, onFileAction }: Props) {
   const toggle = useChatStore((s) => s.toggleBlockCollapsed);
   const { current_path, items, total } = fileList;
 
@@ -93,13 +98,6 @@ export default memo(function FileListBlock({ fileList, collapsed, blockId, onNav
     if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
     return a.name.localeCompare(b.name, "zh-CN");
   });
-
-  const handleTileClick = (item: FileItem) => {
-    if (item.type === "folder" && onNavigate) {
-      const sep = current_path.endsWith("/") ? "" : "/";
-      onNavigate(current_path + sep + item.name);
-    }
-  };
 
   return (
     <div className="border border-gray-200 border-l-[3px] border-l-[#1677ff] rounded-lg bg-white text-[13px] overflow-hidden">
@@ -128,30 +126,43 @@ export default memo(function FileListBlock({ fileList, collapsed, blockId, onNav
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-              {sorted.map((item) => (
-                <div
-                  key={item.name}
-                  onClick={() => handleTileClick(item)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border border-transparent transition-colors ${
-                    item.type === "folder"
-                      ? "cursor-pointer hover:border-gray-200 hover:bg-gray-50"
-                      : "cursor-default"
-                  }`}
-                >
-                  {getFileIcon(item)}
-                  <span
-                    className="text-xs text-gray-700 text-center leading-tight truncate w-full"
-                    title={item.name}
+              {sorted.map((item) => {
+                const sep = current_path.endsWith("/") ? "" : "/";
+                const fullPath = current_path + sep + item.name;
+
+                const menuItems: MenuProps["items"] = [
+                  { key: "analyze", icon: <SearchOutlined />, label: "分析文件" },
+                  { key: "view", icon: <EyeOutlined />, label: "查看文件" },
+                  { key: "add_to_input", icon: <PlusOutlined />, label: "添加到输入框" },
+                ];
+
+                return (
+                  <Dropdown
+                    key={item.name}
+                    menu={{
+                      items: menuItems,
+                      onClick: ({ key }) =>
+                        onFileAction?.(key as "analyze" | "view" | "add_to_input", fullPath),
+                    }}
+                    trigger={["click"]}
                   >
-                    {item.name}
-                  </span>
-                  <span className="text-[11px] text-gray-400 leading-none">
-                    {item.type === "folder"
-                      ? formatDate(item.modified_at || "")
-                      : formatSize(item.size || 0)}
-                  </span>
-                </div>
-              ))}
+                    <div className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-transparent transition-colors cursor-pointer hover:border-gray-200 hover:bg-gray-50">
+                      {getFileIcon(item)}
+                      <span
+                        className="text-xs text-gray-700 text-center leading-tight truncate w-full"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </span>
+                      <span className="text-[11px] text-gray-400 leading-none">
+                        {item.type === "folder"
+                          ? formatDate(item.modified_at || "")
+                          : formatSize(item.size || 0)}
+                      </span>
+                    </div>
+                  </Dropdown>
+                );
+              })}
             </div>
           )}
         </div>

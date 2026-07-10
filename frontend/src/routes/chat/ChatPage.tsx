@@ -28,8 +28,12 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [pools, setPools] = useState<PoolOption[]>([]);
 
-  function onNavigate(path: string) {
-    const text = `查看 ${path} 的内容`;
+  function onFileAction(action: "analyze" | "view" | "add_to_input", filePath: string) {
+    if (action === "add_to_input") {
+      setInput(filePath);
+      return;
+    }
+    const text = action === "analyze" ? `分析 ${filePath}` : `查看 ${filePath} 的内容`;
     setInput(text);
     setTimeout(() => {
       if (!loading) {
@@ -93,7 +97,7 @@ export default function ChatPage() {
   }
 
   function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       onSend();
     }
@@ -182,7 +186,7 @@ export default function ChatPage() {
                 style={{ maxWidth: msg.role === "user" ? "70%" : "85%" }}
               >
                 {msg.role === "assistant" ? (
-                  msg.blocks.length === 0 ? <Spin size="small" /> :                   msg.blocks.map((b) => <BlockView key={b.id} block={b} onNavigate={onNavigate} />)
+                  msg.blocks.length === 0 ? <Spin size="small" /> :                   msg.blocks.map((b) => <BlockView key={b.id} block={b} onFileAction={onFileAction} />)
                 ) : (
                   <span className="whitespace-pre-wrap">{msg.blocks.find((b) => b.type === "text")?.content || ""}</span>
                 )}

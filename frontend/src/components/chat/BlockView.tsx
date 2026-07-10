@@ -77,10 +77,10 @@ const TextBlock = memo(function TextBlock({ block }: { block: Block }) {
 
 interface BlockViewProps {
   block: Block;
-  onNavigate?: (path: string) => void;
+  onFileAction?: (action: "analyze" | "view" | "add_to_input", path: string) => void;
 }
 
-export default memo(function BlockView({ block, onNavigate }: BlockViewProps) {
+export default memo(function BlockView({ block, onFileAction }: BlockViewProps) {
   switch (block.type) {
     case "tool_call":
       return <ToolCallBlock block={block} />;
@@ -92,7 +92,7 @@ export default memo(function BlockView({ block, onNavigate }: BlockViewProps) {
           fileList={block.fileList!}
           collapsed={block.collapsed}
           blockId={block.id}
-          onNavigate={onNavigate}
+          onFileAction={onFileAction}
         />
       );
     default:
