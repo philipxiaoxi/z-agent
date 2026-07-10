@@ -72,10 +72,10 @@ async def agent_ws(ws: WebSocket):
                 msg_type = data.get("type")
                 if msg_type == "confirm":
                     confirm_mgr.resolve(data["id"], data.get("approved", False))
-                elif msg_type == "set_workdir":
+                elif msg_type in ("set_workdir", "restore_workdir"):
                     ctx.workdir = data.get("path", "")
                     await _send(ws, {"type": "workdir_changed", "path": ctx.workdir})
-                    logger.info("workdir set to %s", ctx.workdir)
+                    logger.info("workdir %s to %s", msg_type, ctx.workdir)
                 elif msg_type == "workdir_changed":
                     pass  # 服务端→客户端，忽略回环
                 else:
@@ -99,12 +99,14 @@ async def agent_ws(ws: WebSocket):
             # ---------- 用户消息 → Agent.arun() 流式响应 ----------
             if msg_type == "message":
                 user_content = data.get("content", "")
+                if ctx.workdir:
+                    user_content = f"[当前工作目录：{ctx.workdir}]\n{user_content}"
                 ctx.add_user(user_content)
                 text_buf = ""
                 full_response = ""
 
                 async for event in agent.arun(
-                    ctx.build_messages(),
+                    ctx.get_history(),
                     stream=True,
                     stream_events=True,
                     session_id=ctx.session_id,
