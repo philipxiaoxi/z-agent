@@ -1,13 +1,6 @@
-from pathlib import Path
 from uuid import uuid4
 
-_docs = Path(__file__).parent / "docs"
-
-_WORKDIR_SET = (_docs / "workdir-set.md").read_text(encoding="utf-8").strip()
-_WORKDIR_UNSET = (_docs / "workdir-unset.md").read_text(encoding="utf-8").strip()
-_TAIL = (_docs / "tail.md").read_text(encoding="utf-8").strip()
-
-MAX_TURNS_DEFAULT = 30
+MAX_TURNS_DEFAULT = 20
 
 
 class ConversationContext:
@@ -29,15 +22,6 @@ class ConversationContext:
 
     def get_history(self) -> list[dict]:
         return list(self._messages)
-
-    def build_messages(self) -> list[dict]:
-        history = self.get_history()
-        if self.workdir:
-            body = _WORKDIR_SET.format(workdir=self.workdir)
-        else:
-            body = _WORKDIR_UNSET
-        history = history + [{"role": "system", "content": f"{body}；{_TAIL}"}]
-        return history
 
     @property
     def turn_count(self) -> int:
