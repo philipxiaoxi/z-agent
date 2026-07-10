@@ -25,7 +25,7 @@ def make_show_html_preview_tool(send_to_frontend: Callable[[dict], None] | None 
 
     return Function(
         name="show_html_preview",
-        description="在对话中渲染一个 HTML 交互页面（含 JS/CSS），以可展开卡片形式展示。适用于数据可视化、交互式演示、临时小程序等场景。传入完整的 HTML 文档字符串，将被渲染在沙盒 iframe 中。title 为卡片标题，html 为完整 HTML（可含 <style>、<script>），height 为预览高度（默认 400）。不要用于敏感操作。",
+        description="在对话中渲染一个 HTML 交互页面（含 JS/CSS），以可展开卡片形式展示。适用于数据可视化、文件浏览器、交互式演示、临时小程序等场景。传入完整的 HTML 文档字符串，将被渲染在沙盒 iframe 中。title 为卡片标题，html 为完整 HTML（可含 <style>、<script>），height 为预览高度（默认 400）。\n\nHTML 中可以使用 window.__zspace.fillInput(text) 将内容填充到用户的输入框，适合让用户点击时填入文件路径、命令等。例如：<button onclick=\"__zspace.fillInput('/sata12/my/data/file.txt')\">填入路径</button>。不要用于敏感操作。",
         parameters={
             "type": "object",
             "properties": {

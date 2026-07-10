@@ -80,6 +80,14 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [scrollKey]);
 
+  useEffect(() => {
+    function handleFillInput(e: Event) {
+      setInput((e as CustomEvent).detail);
+    }
+    window.addEventListener("zspace:fillInput", handleFillInput);
+    return () => window.removeEventListener("zspace:fillInput", handleFillInput);
+  }, []);
+
   const statusMeta = STATUS_META[wsStatus as StatusKey];
 
   function onSend() {

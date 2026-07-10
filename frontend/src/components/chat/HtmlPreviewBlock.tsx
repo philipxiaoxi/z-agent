@@ -1,7 +1,25 @@
-import { memo } from "react";
+import { memo, useEffect } from "react";
 import { DownOutlined, RightOutlined, CodeOutlined } from "@ant-design/icons";
 import type { HtmlPreviewData } from "../../stores/chat-store";
 import { useChatStore } from "../../stores/chat-store";
+
+const API_SCRIPT = `<script>
+window.__zspace = {
+  fillInput: function(text) {
+    window.parent.postMessage({source:'zspace-html-preview',action:'fillInput',text:String(text)},'*');
+  }
+};
+<\/script>`;
+
+function injectApi(html: string): string {
+  if (html.includes("</head>")) {
+    return html.replace("</head>", API_SCRIPT + "</head>");
+  }
+  if (html.includes("</body>")) {
+    return html.replace("</body>", API_SCRIPT + "</body>");
+  }
+  return API_SCRIPT + html;
+}
 
 interface Props {
   htmlPreview: HtmlPreviewData;
@@ -12,6 +30,17 @@ interface Props {
 export default memo(function HtmlPreviewBlock({ htmlPreview, collapsed, blockId }: Props) {
   const toggle = useChatStore((s) => s.toggleBlockCollapsed);
   const { title, html, height } = htmlPreview;
+  const wrappedHtml = injectApi(html);
+
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.source === "zspace-html-preview" && e.data?.action === "fillInput") {
+        window.dispatchEvent(new CustomEvent("zspace:fillInput", { detail: e.data.text }));
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   return (
     <div className="border border-gray-200 border-l-[3px] border-l-[#722ed1] rounded-lg bg-white text-[13px]">
@@ -36,7 +65,7 @@ export default memo(function HtmlPreviewBlock({ htmlPreview, collapsed, blockId 
       {!collapsed && (
         <div className="border-t border-gray-200">
           <iframe
-            srcDoc={html}
+            srcDoc={wrappedHtml}
             title={title}
             sandbox="allow-scripts allow-same-origin"
             width="100%"
