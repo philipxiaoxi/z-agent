@@ -212,14 +212,23 @@ async def agent_ws(ws: WebSocket):
                 if not full_response and not any(s["type"] in ("tool_call", "tool_result") for s in segments):
                     continue
 
-                # 从 segments 重建 blocks（给前端），以及 llm_content（给 ctx，含工具信息）
+                # 合并连续文本片段，避免流式拆碎
+                merged: list[dict] = []
+                for seg in segments:
+                    if seg["type"] == "text" and merged and merged[-1]["type"] == "text":
+                        merged[-1]["content"] += seg["content"]
+                    else:
+                        merged.append(seg)
+
+                # 从 merged 重建 blocks（给前端），以及 llm_content（给 ctx，含工具信息）
                 blocks: list[dict] = []
                 llm_parts: list[str] = []
 
-                for seg in segments:
+                for seg in merged:
                     if seg["type"] == "text":
-                        blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
-                        llm_parts.append(seg["content"])
+                        if seg["content"].strip():
+                            blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
+                            llm_parts.append(seg["content"])
                     elif seg["type"] == "tool_call":
                         blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
                         llm_parts.append(f"\n[调用工具: {seg['tool']}]\n参数: {json.dumps(seg['args'], ensure_ascii=False)}")
