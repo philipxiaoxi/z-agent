@@ -46,7 +46,9 @@ interface ChatState {
   sessionsLoading: boolean;
   messagesLoading: boolean;
   storeReady: boolean;
+  _initializing: boolean;
 
+  initialize: () => Promise<void>;
   fetchSessions: () => Promise<void>;
   ensureOneSession: () => Promise<string | null>;
   createSession: () => Promise<string | null>;
@@ -107,7 +109,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessionsLoading: false,
   messagesLoading: false,
   storeReady: false,
+  _initializing: false,
   workdir: loadWorkdir(),
+
+  initialize: async () => {
+    if (get()._initializing) return;
+    set({ _initializing: true });
+    await get().fetchSessions();
+    await get().ensureOneSession();
+    set({ _initializing: false });
+  },
 
   fetchSessions: async () => {
     set({ sessionsLoading: true });

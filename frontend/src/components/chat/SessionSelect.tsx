@@ -13,8 +13,7 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
     activeSessionId,
     sessionsLoading,
     storeReady,
-    fetchSessions,
-    ensureOneSession,
+    initialize,
     createSession,
     deleteSession,
     renameSession,
@@ -26,7 +25,7 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
 
   useEffect(() => {
     if (!storeReady) {
-      fetchSessions().then(() => ensureOneSession());
+      initialize();
     }
   }, [storeReady]);
 
