@@ -205,25 +205,36 @@ async def agent_ws(ws: WebSocket):
                     segments.append({"type": "text", "content": text_buf})
                     await _send(ws, {"type": "text", "content": text_buf})
 
-                if full_response:
-                    ctx.add_assistant(full_response)
-
                 await _send(ws, {"type": "done"})
 
-                # AI 输出完毕后将 segments 转为 blocks 写入 session store
-                if session_id and full_response:
-                    blocks: list[dict] = []
-                    for seg in segments:
-                        if seg["type"] == "text":
-                            blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
-                        elif seg["type"] == "tool_call":
-                            blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
-                        elif seg["type"] == "tool_result":
-                            blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
-                    session_store.append_messages(session_id, [
-                        {"id": str(uuid4()), "role": "user", "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}]},
-                        {"id": str(uuid4()), "role": "assistant", "blocks": blocks},
-                    ])
+                if not session_id:
+                    continue
+                if not full_response and not any(s["type"] in ("tool_call", "tool_result") for s in segments):
+                    continue
+
+                # 从 segments 重建 blocks（给前端），以及 llm_content（给 ctx，含工具信息）
+                blocks: list[dict] = []
+                llm_parts: list[str] = []
+
+                for seg in segments:
+                    if seg["type"] == "text":
+                        blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
+                        llm_parts.append(seg["content"])
+                    elif seg["type"] == "tool_call":
+                        blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
+                        llm_parts.append(f"\n[调用工具: {seg['tool']}]\n参数: {json.dumps(seg['args'], ensure_ascii=False)}")
+                    elif seg["type"] == "tool_result":
+                        blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
+                        llm_parts.append(f"返回: {seg['result']}\n")
+
+                llm_content = "\n".join(llm_parts).strip()
+                ctx.add_assistant(llm_content)
+
+                # 写入 session store
+                session_store.append_messages(session_id, [
+                    {"id": str(uuid4()), "role": "user", "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}]},
+                    {"id": str(uuid4()), "role": "assistant", "blocks": blocks},
+                ])
 
             elif msg_type == "confirm":
                 confirm_mgr.resolve(data["id"], data.get("approved", False))
