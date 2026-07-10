@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>zspace-agent</h1>
+  <h1>z-agent (极同学)</h1>
   <p><em>NAS AI 管理助手 — 用自然语言管理你的存储</em></p>
 
   <p>
@@ -13,7 +13,7 @@
 
 ## 概述
 
-zspace-agent 是一个基于 AI 的 NAS（网络附加存储）管理助手，代号"极同学"。通过自然语言对话的方式，让你可以像聊天一样管理 NAS 上的文件和存储资源。
+z-agent 是一个基于 AI 的 NAS（网络附加存储）管理助手，代号"极同学"。通过自然语言对话的方式，让你可以像聊天一样管理 NAS 上的文件和存储资源。
 
 项目采用前后端分离架构，后端集成 DeepSeek V4 Flash 大语言模型，通过工具调用（MCP 协议）桥接 [z-cli](https://github.com/philipxiaoxi/z-cli) 命令行，实现对 zspace 私有云 NAS 的完整操作能力。
 
@@ -54,8 +54,8 @@ zspace-agent 是一个基于 AI 的 NAS（网络附加存储）管理助手，�
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/zspace-agent.git
-cd zspace-agent
+git clone https://github.com/your-username/z-agent.git
+cd z-agent
 ```
 
 ### 2. 启动后端
@@ -83,7 +83,7 @@ npm run dev
 ## 项目结构
 
 ```
-zspace-agent/
+z-agent/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                  # FastAPI 应用入口
@@ -174,7 +174,7 @@ zspace-agent/
 ### 后端 (.env)
 
 ```ini
-APP_NAME=zspace-agent
+APP_NAME=极同学
 APP_ENV=development
 HOST=0.0.0.0
 PORT=8000

@@ -80,7 +80,7 @@ function withNewBlock(s: ChatState, block: Block): Partial<ChatState> {
   };
 }
 
-const WORKDIR_KEY = "zspace_workdir";
+const WORKDIR_KEY = "zagent_workdir";
 
 function loadWorkdir(): string {
   try {

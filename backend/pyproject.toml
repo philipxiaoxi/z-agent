@@ -1,5 +1,5 @@
 [project]
-name = "zspace-agent-backend"
+name = "z-agent-backend"
 version = "0.1.0"
 description = "NAS Agent Backend"
 requires-python = ">=3.11"
