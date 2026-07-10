@@ -11,6 +11,10 @@
   </p>
 </div>
 
+<div align="center">
+  <img src="imgs/intro.png" alt="极同学界面预览" width="800" />
+</div>
+
 ## 概述
 
 z-agent 是一个基于 AI 的 NAS（网络附加存储）管理助手，代号"极同学"。通过自然语言对话的方式，让你可以像聊天一样管理 NAS 上的文件和存储资源。
