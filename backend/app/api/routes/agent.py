@@ -76,7 +76,8 @@ async def agent_ws(ws: WebSocket):
                     session_id = data.get("session_id", "")
                     if ctx.session_id:
                         _session_histories[ctx.session_id] = ctx.get_history()
-                    ctx.restore_history(_session_histories.get(session_id, []))
+                    history = _session_histories.get(session_id) or session_store.load_history(session_id)
+                    ctx.restore_history(history or [])
                     ctx.session_id = session_id
                     logger.info("session switched to %s", session_id)
                 elif msg_type == "workdir_changed":
@@ -106,7 +107,8 @@ async def agent_ws(ws: WebSocket):
                 if session_id and session_id != ctx.session_id:
                     if ctx.session_id:
                         _session_histories[ctx.session_id] = ctx.get_history()
-                    ctx.restore_history(_session_histories.get(session_id, []))
+                    history = _session_histories.get(session_id) or session_store.load_history(session_id)
+                    ctx.restore_history(history or [])
                     ctx.session_id = session_id
 
                 user_content_for_llm = user_content
@@ -238,6 +240,8 @@ async def agent_ws(ws: WebSocket):
 
                 llm_content = "\n".join(llm_parts).strip()
                 ctx.add_assistant(llm_content)
+                _session_histories[ctx.session_id] = ctx.get_history()
+                session_store.save_history(ctx.session_id, ctx.get_history())
 
                 # 写入 session store
                 session_store.append_messages(session_id, [
