@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type BlockType = "text" | "tool_call" | "tool_result" | "file_list" | "html_preview" | "thinking";
+export type BlockType = "text" | "tool_call" | "tool_result" | "thinking";
 
 export interface FileItem {
   name: string;
@@ -10,9 +10,10 @@ export interface FileItem {
 }
 
 export interface FileListData {
-  current_path: string;
-  items: FileItem[];
-  total: number;
+  current_path?: string;
+  path?: string;
+  items?: FileItem[];
+  total?: number;
 }
 
 export interface HtmlPreviewData {
@@ -28,8 +29,6 @@ export interface Block {
   tool?: string;
   args?: Record<string, unknown>;
   result?: string;
-  fileList?: FileListData;
-  htmlPreview?: HtmlPreviewData;
   collapsed: boolean;
 }
 
@@ -67,8 +66,6 @@ interface ChatState {
   appendText: (chunk: string) => void;
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
-  addFileList: (data: FileListData) => void;
-  addHtmlPreview: (data: HtmlPreviewData) => void;
   appendThinking: (chunk: string) => void;
   toggleBlockCollapsed: (blockId: string) => void;
 
@@ -259,26 +256,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         type: "tool_result",
         tool,
         result,
-        collapsed: true,
-      })
-    ),
-
-  addFileList: (data) =>
-    set((s) =>
-      withNewBlock(s, {
-        id: crypto.randomUUID(),
-        type: "file_list",
-        fileList: data,
-        collapsed: false,
-      })
-    ),
-
-  addHtmlPreview: (data) =>
-    set((s) =>
-      withNewBlock(s, {
-        id: crypto.randomUUID(),
-        type: "html_preview",
-        htmlPreview: data,
         collapsed: true,
       })
     ),
