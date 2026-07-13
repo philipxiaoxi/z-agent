@@ -120,7 +120,10 @@ async def agent_ws(ws: WebSocket):
                     user_content_for_llm = f"[当前工作目录：{ctx.workdir}]\n{user_content}"
                 ctx.add_user(user_content_for_llm)
 
+                store_thinking = settings.STORE_THINKING_IN_CONTEXT
+
                 text_buf = ""
+                thinking_buf = ""
                 full_response = ""
                 segments: list[dict] = []
 
@@ -128,6 +131,12 @@ async def agent_ws(ws: WebSocket):
                     nonlocal text_buf
                     if text_buf:
                         segments.append({"type": "text", "content": text_buf})
+
+                def _append_thinking_segment() -> None:
+                    nonlocal thinking_buf
+                    if thinking_buf:
+                        segments.append({"type": "thinking", "content": thinking_buf})
+                        thinking_buf = ""
 
                 async for event in agent.arun(
                     ctx.get_history(),
@@ -142,6 +151,8 @@ async def agent_ws(ws: WebSocket):
                             _flush_text()
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
+                        if thinking_buf:
+                            _append_thinking_segment()
                         tool = getattr(event, "tool", None)
                         if tool:
                             segments.append({"type": "tool_call", "tool": tool.tool_name or "", "args": tool.tool_args or {}})
@@ -157,6 +168,8 @@ async def agent_ws(ws: WebSocket):
                             _flush_text()
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
+                        if thinking_buf:
+                            _append_thinking_segment()
                         tool = getattr(event, "tool", None)
                         if tool:
                             result = tool.result
@@ -177,6 +190,8 @@ async def agent_ws(ws: WebSocket):
                             _flush_text()
                             await _send(ws, {"type": "text", "content": text_buf})
                             text_buf = ""
+                        if thinking_buf:
+                            _append_thinking_segment()
                         tool = getattr(event, "tool", None)
                         if tool:
                             err = f"错误: {tool.tool_call_error}"
@@ -194,97 +209,119 @@ async def agent_ws(ws: WebSocket):
 
                     elif et in ("RunContent", "IntermediateRunContent"):
                         chunk = getattr(event, "content", None)
-                        if chunk is None:
+                        if chunk is None and not getattr(event, "reasoning_content", None):
                             continue
-                        if chunk == "":
-                            text_buf += "\n"
-                            full_response += "\n"
-                        else:
-                            text_buf += str(chunk)
-                            full_response += str(chunk)
-                            if "\n" in text_buf or len(text_buf) >= 2:
-                                segments.append({"type": "text", "content": text_buf})
-                                await _send(ws, {"type": "text", "content": text_buf})
-                                text_buf = ""
+                        if chunk is not None:
+                            if chunk == "":
+                                text_buf += "\n"
+                                full_response += "\n"
+                            else:
+                                text_buf += str(chunk)
+                                full_response += str(chunk)
+                                if "\n" in text_buf or len(text_buf) >= 2:
+                                    segments.append({"type": "text", "content": text_buf})
+                                    await _send(ws, {"type": "text", "content": text_buf})
+                                    text_buf = ""
+                        reasoning_chunk = getattr(event, "reasoning_content", None)
+                        if reasoning_chunk:
+                            thinking_buf += str(reasoning_chunk)
+                            await _send(ws, {"type": "thinking", "content": str(reasoning_chunk)})
+
+                    elif et == "ReasoningContentDelta":
+                        delta = getattr(event, "reasoning_content", None)
+                        if delta:
+                            thinking_buf += str(delta)
+                            await _send(ws, {"type": "thinking", "content": str(delta)})
 
                 if text_buf:
                     segments.append({"type": "text", "content": text_buf})
                     await _send(ws, {"type": "text", "content": text_buf})
+                if thinking_buf:
+                    _append_thinking_segment()
+
+                if session_id and (full_response or any(s["type"] in ("tool_call", "tool_result", "file_list", "html_preview", "thinking") for s in segments)):
+                    # 合并连续文本片段
+                    merged: list[dict] = []
+                    for seg in segments:
+                        if seg["type"] == "text" and merged and merged[-1]["type"] == "text":
+                            merged[-1]["content"] += seg["content"]
+                        else:
+                            merged.append(seg)
+
+                    # 重建 blocks（给前端展示）
+                    thinking_content = ""
+                    blocks: list[dict] = []
+                    for seg in merged:
+                        if seg["type"] == "thinking":
+                            thinking_content += seg["content"]
+                            continue
+                        if seg["type"] == "text":
+                            if seg["content"].strip():
+                                blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
+                        elif seg["type"] == "tool_call":
+                            blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
+                        elif seg["type"] == "tool_result":
+                            blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
+                        elif seg["type"] == "file_list":
+                            blocks.append({"id": str(uuid4()), "type": "file_list", "fileList": seg["data"], "collapsed": False})
+                        elif seg["type"] == "html_preview":
+                            blocks.append({"id": str(uuid4()), "type": "html_preview", "htmlPreview": seg.get("data", {}), "collapsed": True})
+                    if thinking_content:
+                        blocks.insert(0, {"id": str(uuid4()), "type": "thinking", "content": thinking_content, "collapsed": False})
+
+                    # 构建 LLM 消息（标准 tool 格式）
+                    llm_msgs: list[dict] = []
+                    pending_text = ""
+                    for seg in merged:
+                        if seg["type"] == "text":
+                            pending_text += seg["content"]
+                        elif seg["type"] == "tool_call":
+                            if pending_text.strip():
+                                msg = {"role": "assistant", "content": pending_text.strip()}
+                                if store_thinking and thinking_content:
+                                    msg["reasoning_content"] = thinking_content
+                                llm_msgs.append(msg)
+                                pending_text = ""
+                            call_id = f"call_{uuid4().hex[:8]}"
+                            llm_msgs.append({
+                                "role": "assistant",
+                                "content": None,
+                                "tool_calls": [{
+                                    "id": call_id,
+                                    "type": "function",
+                                    "function": {
+                                        "name": seg["tool"],
+                                        "arguments": json.dumps(seg["args"], ensure_ascii=False),
+                                    },
+                                }],
+                            })
+                        elif seg["type"] == "tool_result":
+                            call_id = llm_msgs[-1]["tool_calls"][0]["id"] if llm_msgs and llm_msgs[-1].get("tool_calls") else f"call_{uuid4().hex[:8]}"
+                            llm_msgs.append({
+                                "role": "tool",
+                                "tool_call_id": call_id,
+                                "content": seg["result"],
+                                "name": seg["tool"],
+                            })
+                    if pending_text.strip():
+                        msg = {"role": "assistant", "content": pending_text.strip()}
+                        if store_thinking and thinking_content:
+                            msg["reasoning_content"] = thinking_content
+                        llm_msgs.append(msg)
+
+                    if llm_msgs:
+                        ctx.append_messages(llm_msgs)
+                        _session_histories[ctx.session_id] = ctx.get_history()
+
+                    # 单次文件写入
+                    session_store.save_session_data(ctx.session_id,
+                        history=ctx.get_history(),
+                        messages=[
+                            {"id": str(uuid4()), "role": "user", "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}]},
+                            {"id": str(uuid4()), "role": "assistant", "blocks": blocks},
+                        ])
 
                 await _send(ws, {"type": "done"})
-
-                if not session_id:
-                    continue
-                if not full_response and not any(s["type"] in ("tool_call", "tool_result", "file_list", "html_preview") for s in segments):
-                    continue
-
-                # 合并连续文本片段
-                merged: list[dict] = []
-                for seg in segments:
-                    if seg["type"] == "text" and merged and merged[-1]["type"] == "text":
-                        merged[-1]["content"] += seg["content"]
-                    else:
-                        merged.append(seg)
-
-                # 重建 blocks（给前端展示）
-                blocks: list[dict] = []
-                for seg in merged:
-                    if seg["type"] == "text":
-                        if seg["content"].strip():
-                            blocks.append({"id": str(uuid4()), "type": "text", "content": seg["content"], "collapsed": False})
-                    elif seg["type"] == "tool_call":
-                        blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
-                    elif seg["type"] == "tool_result":
-                        blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
-                    elif seg["type"] == "file_list":
-                        blocks.append({"id": str(uuid4()), "type": "file_list", "fileList": seg["data"], "collapsed": False})
-                    elif seg["type"] == "html_preview":
-                        blocks.append({"id": str(uuid4()), "type": "html_preview", "htmlPreview": seg.get("data", {}), "collapsed": True})
-
-                # 构建 LLM 消息（标准 tool 格式）
-                llm_msgs: list[dict] = []
-                pending_text = ""
-                for seg in merged:
-                    if seg["type"] == "text":
-                        pending_text += seg["content"]
-                    elif seg["type"] == "tool_call":
-                        if pending_text.strip():
-                            llm_msgs.append({"role": "assistant", "content": pending_text.strip()})
-                            pending_text = ""
-                        call_id = f"call_{uuid4().hex[:8]}"
-                        llm_msgs.append({
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": [{
-                                "id": call_id,
-                                "type": "function",
-                                "function": {
-                                    "name": seg["tool"],
-                                    "arguments": json.dumps(seg["args"], ensure_ascii=False),
-                                },
-                            }],
-                        })
-                    elif seg["type"] == "tool_result":
-                        call_id = llm_msgs[-1]["tool_calls"][0]["id"] if llm_msgs and llm_msgs[-1].get("tool_calls") else f"call_{uuid4().hex[:8]}"
-                        llm_msgs.append({
-                            "role": "tool",
-                            "tool_call_id": call_id,
-                            "content": seg["result"],
-                            "name": seg["tool"],
-                        })
-                if pending_text.strip():
-                    llm_msgs.append({"role": "assistant", "content": pending_text.strip()})
-
-                if llm_msgs:
-                    ctx.append_messages(llm_msgs)
-                    _session_histories[ctx.session_id] = ctx.get_history()
-                    session_store.save_history(ctx.session_id, ctx.get_history())
-
-                # 写入 session store
-                session_store.append_messages(session_id, [
-                    {"id": str(uuid4()), "role": "user", "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}]},
-                    {"id": str(uuid4()), "role": "assistant", "blocks": blocks},
-                ])
 
             elif msg_type == "confirm":
                 confirm_mgr.resolve(data["id"], data.get("approved", False))

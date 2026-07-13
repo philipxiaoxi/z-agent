@@ -17,5 +17,7 @@ class Settings(BaseSettings):
 
     DEEPSEEK_API_KEY: str = ""
 
+    STORE_THINKING_IN_CONTEXT: bool = True
+
 
 settings = Settings()

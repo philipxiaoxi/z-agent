@@ -68,24 +68,25 @@ def rename_session(session_id: str, name: str) -> bool:
     return True
 
 
-def append_messages(session_id: str, messages: list[dict]) -> bool:
+def save_session_data(session_id: str, *, messages: list[dict] | None = None, history: list[dict] | None = None) -> bool:
     p = _path(session_id)
     if not p.exists():
         return False
     data = json.loads(p.read_text())
-    data.setdefault("messages", []).extend(messages)
+    if messages is not None:
+        data.setdefault("messages", []).extend(messages)
+    if history is not None:
+        data["llm_history"] = history
     p.write_text(json.dumps(data, ensure_ascii=False))
     return True
+
+
+def append_messages(session_id: str, messages: list[dict]) -> bool:
+    return save_session_data(session_id, messages=messages)
 
 
 def save_history(session_id: str, history: list[dict]) -> bool:
-    p = _path(session_id)
-    if not p.exists():
-        return False
-    data = json.loads(p.read_text())
-    data["llm_history"] = history
-    p.write_text(json.dumps(data, ensure_ascii=False))
-    return True
+    return save_session_data(session_id, history=history)
 
 
 def load_history(session_id: str) -> list[dict] | None:
