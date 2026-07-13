@@ -88,13 +88,24 @@ interface Props {
   collapsed: boolean;
   blockId: string;
   onFileAction?: (action: "analyze" | "view" | "add_to_input", path: string) => void;
+  onToggle?: () => void;
 }
 
-export default memo(function FileListBlock({ fileList, collapsed, blockId, onFileAction }: Props) {
-  const toggle = useChatStore((s) => s.toggleBlockCollapsed);
-  const { current_path, items, total } = fileList;
+function normalizeItems(items: FileItem[]): FileItem[] {
+  return items.map((item) => ({
+    ...item,
+    type: (["folder", "directory", "dir"].includes(item.type) ? "folder" : "file") as "file" | "folder",
+    size: Number(item.size ?? 0),
+  }));
+}
 
-  const sorted = [...items].sort((a, b) => {
+export default memo(function FileListBlock({ fileList, collapsed, blockId, onFileAction, onToggle }: Props) {
+  const storeToggle = useChatStore((s) => s.toggleBlockCollapsed);
+  const toggle = onToggle ?? (() => storeToggle(blockId));
+  const { path, current_path = path ?? "", items = [], total } = fileList;
+  const normalizedItems = normalizeItems(items);
+
+  const sorted = [...normalizedItems].sort((a, b) => {
     if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
     return a.name.localeCompare(b.name, "zh-CN");
   });
@@ -102,7 +113,7 @@ export default memo(function FileListBlock({ fileList, collapsed, blockId, onFil
   return (
     <div className="border border-gray-200 border-l-[3px] border-l-[#1677ff] rounded-lg bg-white text-[13px] overflow-hidden">
       <div
-        onClick={() => toggle(blockId)}
+        onClick={() => toggle()}
         className="flex items-center gap-1.5 px-3.5 py-2.5 cursor-pointer select-none bg-gray-50 hover:bg-gray-100 transition-colors"
       >
         {collapsed ? (
@@ -114,12 +125,12 @@ export default memo(function FileListBlock({ fileList, collapsed, blockId, onFil
         <span className="font-semibold text-gray-700 truncate flex-1 ml-0.5">
           {current_path || "文件列表"}
         </span>
-        <span className="text-xs text-gray-400 whitespace-nowrap">共 {total} 项</span>
+        <span className="text-xs text-gray-400 whitespace-nowrap">共 {total || normalizedItems.length} 项</span>
       </div>
 
       {!collapsed && (
         <div className="p-3">
-          {items.length === 0 ? (
+          {normalizedItems.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-gray-400">
               <InboxOutlined className="text-4xl opacity-30" />
               <span className="text-sm">此目录为空</span>
