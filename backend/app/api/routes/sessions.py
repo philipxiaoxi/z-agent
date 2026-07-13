@@ -1,5 +1,8 @@
+from uuid import uuid4
+
 from fastapi import APIRouter
 from pydantic import BaseModel
+from app.blocks import build_blocks
 from app.core import session_store
 
 router = APIRouter()
@@ -34,6 +37,14 @@ def get_session_detail(session_id: str):
     session = session_store.get_session(session_id)
     if not session:
         return {"error": "not found"}, 404
+    for msg in session.get("messages", []):
+        if msg.get("blocks"):
+            continue
+        if msg.get("role") == "user":
+            msg["blocks"] = [{"id": str(uuid4()), "type": "text", "content": msg.get("content", ""), "collapsed": False}]
+        elif msg.get("role") == "assistant" and msg.get("segments"):
+            msg["blocks"] = build_blocks(msg["segments"])
+        msg.pop("segments", None)
     return session
 
 

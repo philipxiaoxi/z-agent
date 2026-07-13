@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from app.agent.events import AgentEvent
 from app.agent.runner import AgentRunner
-from app.blocks import build_blocks, serialize_llm_messages
+from app.blocks import merge_segments, serialize_llm_messages
 from app.core.config import settings
 from app.core.context import ConversationContext
 from app.core.tools.confirm import ConfirmManager
@@ -115,17 +115,15 @@ class ConversationOrchestrator:
                     await self._transport.emit(msg)
 
         if session_id and (full_response or any(s["type"] in ("tool_call", "tool_result", "thinking") for s in segments)):
-            blocks = build_blocks(segments)
             llm_msgs = serialize_llm_messages(segments, store_thinking)
 
             if llm_msgs:
                 self._ctx.append_messages(llm_msgs)
 
             self._sessions.save(self._ctx.session_id,
-                history=self._ctx.get_history(),
                 messages=[
-                    {"id": str(uuid4()), "role": "user", "blocks": [{"id": str(uuid4()), "type": "text", "content": user_content, "collapsed": False}]},
-                    {"id": str(uuid4()), "role": "assistant", "blocks": blocks},
+                    {"id": str(uuid4()), "role": "user", "content": user_content},
+                    {"id": str(uuid4()), "role": "assistant", "segments": merge_segments(segments)},
                 ])
 
         await self._transport.emit({"type": "done"})
