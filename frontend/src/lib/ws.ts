@@ -37,6 +37,7 @@ export type WsStatus = "connecting" | "connected" | "disconnected";
 export interface WsEvents {
   onStatusChange: (status: WsStatus) => void;
   onText: (content: string) => void;
+  onThinking: (content: string) => void;
   onToolStart: (data: ToolCallEvent) => void;
   onToolResult: (data: ToolResultEvent) => void;
   onFileList: (data: FileListEvent) => void;
@@ -66,6 +67,7 @@ function sendOrQueue(ws: WebSocket, payload: Record<string, unknown>) {
 
 type ServerEvent =
   | { type: "text"; content: string }
+  | { type: "thinking"; content: string }
   | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
   | { type: "tool_result"; id: string; tool: string; result: string }
   | { type: "file_list"; data: import("../stores/chat-store").FileListData }
@@ -110,6 +112,9 @@ export function createChatWs(events: WsEvents): ChatWs {
         switch (data.type) {
           case "text":
             events.onText(data.content);
+            break;
+          case "thinking":
+            events.onThinking(data.content);
             break;
           case "tool_start":
             events.onToolStart({ id: data.id, tool: data.tool, args: data.args });

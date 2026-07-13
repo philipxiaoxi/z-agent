@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type BlockType = "text" | "tool_call" | "tool_result" | "file_list" | "html_preview";
+export type BlockType = "text" | "tool_call" | "tool_result" | "file_list" | "html_preview" | "thinking";
 
 export interface FileItem {
   name: string;
@@ -69,6 +69,7 @@ interface ChatState {
   addToolResult: (tool: string, result: string) => void;
   addFileList: (data: FileListData) => void;
   addHtmlPreview: (data: HtmlPreviewData) => void;
+  appendThinking: (chunk: string) => void;
   toggleBlockCollapsed: (blockId: string) => void;
 
   workdir: string;
@@ -281,6 +282,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
         collapsed: true,
       })
     ),
+
+  appendThinking: (chunk) =>
+    set((s) => {
+      if (!s.messages.length) return s;
+      const last = s.messages[s.messages.length - 1]!;
+      const blocks = [...last.blocks];
+      const lastBlock = blocks[blocks.length - 1];
+      if (lastBlock?.type === "thinking") {
+        blocks[blocks.length - 1] = {
+          ...lastBlock,
+          content: (lastBlock.content || "") + chunk,
+        };
+      } else {
+        blocks.push({
+          id: crypto.randomUUID(),
+          type: "thinking",
+          content: chunk,
+          collapsed: false,
+        });
+      }
+      return {
+        messages: [
+          ...s.messages.slice(0, -1),
+          { ...last, blocks },
+        ],
+      };
+    }),
 
   toggleBlockCollapsed: (blockId) =>
     set((s) => ({

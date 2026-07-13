@@ -11,7 +11,7 @@ import {
 import { useChatStore } from "../stores/chat-store";
 
 export function useChatWs() {
-  const { appendText, addToolCall, addToolResult, addFileList, addHtmlPreview, setWorkdir, activeSessionId } = useChatStore();
+  const { appendText, appendThinking, addToolCall, addToolResult, addFileList, addHtmlPreview, setWorkdir, activeSessionId } = useChatStore();
   const [loading, setLoading] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const wsRef = useRef<ChatWs | null>(null);
@@ -24,6 +24,9 @@ export function useChatWs() {
       onStatusChange: setWsStatus,
       onText(content) {
         appendText(content);
+      },
+      onThinking(content) {
+        appendThinking(content);
       },
       onToolStart(data) {
         addToolCall(data.tool, data.args);
@@ -62,7 +65,7 @@ export function useChatWs() {
     });
     wsRef.current = ws;
     return () => ws.close();
-  }, [appendText, addToolCall, addToolResult, addFileList, addHtmlPreview, setWorkdir]);
+  }, [appendText, appendThinking, addToolCall, addToolResult, addFileList, addHtmlPreview, setWorkdir]);
 
   useEffect(() => {
     wsRef.current?.sendSetSession(activeSessionId ?? "");

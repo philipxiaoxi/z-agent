@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined,
   DownOutlined,
   RightOutlined,
+  BulbOutlined,
 } from "@ant-design/icons";
 import type { Block } from "../../stores/chat-store";
 import { useChatStore } from "../../stores/chat-store";
@@ -62,6 +63,29 @@ const ToolResultBlock = memo(function ToolResultBlock({ block }: { block: Block 
   );
 });
 
+const ThinkingBlock = memo(function ThinkingBlock({ block }: { block: Block }) {
+  const toggle = useChatStore((s) => s.toggleBlockCollapsed);
+
+  return (
+    <div className="border border-amber-200 border-l-[3px] border-l-amber-400 rounded-lg bg-amber-50 px-3.5 py-2.5 text-[13px]">
+      <div onClick={() => toggle(block.id)} className="flex items-center gap-1.5 cursor-pointer select-none">
+        {block.collapsed ? <RightOutlined style={{ color: "#d97706", fontSize: 12 }} /> : <DownOutlined style={{ color: "#d97706", fontSize: 12 }} />}
+        <BulbOutlined className="text-sm" style={{ color: "#d97706" }} />
+        <span className="font-semibold text-gray-700">思考过程</span>
+      </div>
+      {!block.collapsed && (
+        <div className="mt-2 text-xs text-gray-600 whitespace-pre-wrap">
+          {block.content ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{block.content}</ReactMarkdown>
+          ) : (
+            <Spin size="small" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
 const TextBlock = memo(function TextBlock({ block }: { block: Block }) {
   if (!block.content) {
     return <Spin size="small" />;
@@ -83,6 +107,8 @@ interface BlockViewProps {
 
 export default memo(function BlockView({ block, onFileAction }: BlockViewProps) {
   switch (block.type) {
+    case "thinking":
+      return <ThinkingBlock block={block} />;
     case "tool_call":
       return <ToolCallBlock block={block} />;
     case "tool_result":
