@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import os
+
+os.environ.setdefault("AGNO_TELEMETRY", "false")
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
