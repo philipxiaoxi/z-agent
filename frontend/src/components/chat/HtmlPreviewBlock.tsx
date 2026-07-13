@@ -25,10 +25,12 @@ interface Props {
   htmlPreview: HtmlPreviewData;
   collapsed: boolean;
   blockId: string;
+  onToggle?: () => void;
 }
 
-export default memo(function HtmlPreviewBlock({ htmlPreview, collapsed, blockId }: Props) {
-  const toggle = useChatStore((s) => s.toggleBlockCollapsed);
+export default memo(function HtmlPreviewBlock({ htmlPreview, collapsed, blockId, onToggle }: Props) {
+  const storeToggle = useChatStore((s) => s.toggleBlockCollapsed);
+  const toggle = onToggle ?? (() => storeToggle(blockId));
   const { title, html, height } = htmlPreview;
   const wrappedHtml = injectApi(html);
 
@@ -45,7 +47,7 @@ export default memo(function HtmlPreviewBlock({ htmlPreview, collapsed, blockId 
   return (
     <div className="border border-gray-200 border-l-[3px] border-l-[#722ed1] rounded-lg bg-white text-[13px]">
       <div
-        onClick={() => toggle(blockId)}
+        onClick={() => toggle()}
         className="flex items-center gap-1.5 px-3.5 py-2.5 cursor-pointer select-none bg-gray-50 hover:bg-gray-100 transition-colors rounded-t-lg"
       >
         {collapsed ? (
