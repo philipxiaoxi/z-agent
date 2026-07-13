@@ -264,6 +264,7 @@ async def agent_ws(ws: WebSocket):
                     # 构建 LLM 消息（标准 tool 格式）
                     llm_msgs: list[dict] = []
                     pending_text = ""
+                    tool_call_queue: list[str] = []
                     for seg in merged:
                         if seg["type"] == "text":
                             pending_text += seg["content"]
@@ -275,20 +276,32 @@ async def agent_ws(ws: WebSocket):
                                 llm_msgs.append(msg)
                                 pending_text = ""
                             call_id = f"call_{uuid4().hex[:8]}"
-                            llm_msgs.append({
-                                "role": "assistant",
-                                "content": None,
-                                "tool_calls": [{
+                            tool_call_queue.append(call_id)
+                            last = llm_msgs[-1] if llm_msgs else None
+                            if last and last["role"] == "assistant" and last.get("tool_calls"):
+                                last["tool_calls"].append({
                                     "id": call_id,
                                     "type": "function",
                                     "function": {
                                         "name": seg["tool"],
                                         "arguments": json.dumps(seg["args"], ensure_ascii=False),
                                     },
-                                }],
-                            })
+                                })
+                            else:
+                                llm_msgs.append({
+                                    "role": "assistant",
+                                    "content": None,
+                                    "tool_calls": [{
+                                        "id": call_id,
+                                        "type": "function",
+                                        "function": {
+                                            "name": seg["tool"],
+                                            "arguments": json.dumps(seg["args"], ensure_ascii=False),
+                                        },
+                                    }],
+                                })
                         elif seg["type"] == "tool_result":
-                            call_id = llm_msgs[-1]["tool_calls"][0]["id"] if llm_msgs and llm_msgs[-1].get("tool_calls") else f"call_{uuid4().hex[:8]}"
+                            call_id = tool_call_queue.pop(0) if tool_call_queue else f"call_{uuid4().hex[:8]}"
                             llm_msgs.append({
                                 "role": "tool",
                                 "tool_call_id": call_id,
