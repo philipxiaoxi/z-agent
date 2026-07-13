@@ -67,7 +67,7 @@ cd backend
 uv sync
 cp .env.example .env
 # 编辑 .env，填入 DEEPSEEK_API_KEY
-uv run uvicorn app.main:app --reload   # → http://localhost:8000
+uv run uvicorn app.main:app --reload --reload-exclude '.venv/**'   # → http://localhost:8000
 
 # 2. 前端（新终端）
 cd frontend
@@ -219,7 +219,7 @@ VITE_API_BASE_URL=http://localhost:8000
 cd backend
 uv sync                          # 安装依赖
 uv sync --group dev              # 安装开发依赖（pytest, httpx）
-uv run uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000 --reload-exclude '.venv/**'
 ```
 
 ### 前端开发
