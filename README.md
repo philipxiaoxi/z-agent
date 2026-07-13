@@ -49,40 +49,46 @@ z-agent 是一个基于 AI 的 NAS（网络附加存储）管理助手，代号"
 
 ### 前置条件
 
-- Python 3.11+
-- Node.js 18+
-- uv（Python 包管理器）
-- zcli（zspace NAS 命令行工具）
+| 场景 | 要求 |
+|------|------|
+| 开发 | Python 3.11+, Node.js 18+, uv, npm |
+| 部署 | Python 3.11+, Docker (可选) |
+
+所有场景都需要：
+- [z-cli](https://github.com/philipxiaoxi/z-cli) — zspace NAS 命令行工具
 - DeepSeek API Key
+- zspace 桌面客户端（已登录）
 
-### 1. 克隆项目
-
-```bash
-git clone https://github.com/your-username/z-agent.git
-cd z-agent
-```
-
-### 2. 启动后端
+### 开发模式（前后端分离）
 
 ```bash
+# 1. 后端
 cd backend
 uv sync
 cp .env.example .env
 # 编辑 .env，填入 DEEPSEEK_API_KEY
-uv run uvicorn app.main:app --reload
-```
+uv run uvicorn app.main:app --reload   # → http://localhost:8000
 
-后端默认运行在 `http://localhost:8000`。
-
-### 3. 启动前端
-
-```bash
+# 2. 前端（新终端）
 cd frontend
 npm install
-npm run dev
+npm run dev                            # → http://localhost:5173
 ```
 
-前端默认运行在 `http://localhost:5173`，开发模式下自动代理 `/api` 到后端。
+开发模式下前端自动代理 `/api` 到后端，支持热更新。
+
+### 生产模式（单进程）
+
+```bash
+# 1. 构建前端
+./scripts/build.sh
+
+# 2. 启动后端（自动服务前端页面）
+cd backend
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+浏览器打开 `http://localhost:8000`，后端同时提供 API 和前端页面。
 
 ## 项目结构
 
@@ -90,7 +96,7 @@ npm run dev
 z-agent/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                  # FastAPI 应用入口
+│   │   ├── main.py                  # FastAPI 应用入口（含静态文件服务）
 │   │   ├── api/
 │   │   │   └── routes/
 │   │   │       ├── agent.py         # WebSocket 主通信（核心）
@@ -106,12 +112,15 @@ z-agent/
 │   │       │   ├── prompts.py       # 提示词加载
 │   │       │   └── docs/            # 角色定义 & 系统指令
 │   │       └── tools/
-│   │           ├── confirm.py       # 用户确认管理
+│   │           ├── confirm.py           # 用户确认管理
 │   │           ├── zcli_mcp_wrapper.py  # MCP 工具包装+路径门禁
 │   │           ├── show_directory.py    # 文件浏览器推送
+│   │           ├── show_html_preview.py # HTML 交互页面渲染
 │   │           └── set_workdir.py       # 工作目录设置
+│   ├── static/                      # 前端构建产物（已 gitignore）
 │   ├── pyproject.toml
-│   └── .env.example
+│   ├── .env.example
+│   └── .gitignore
 │
 ├── frontend/
 │   ├── src/
@@ -131,6 +140,10 @@ z-agent/
 │   ├── package.json
 │   └── vite.config.ts
 │
+├── scripts/
+│   └── build.sh                     # 一键构建前端→backend/static/
+├── Dockerfile                       # 多阶段构建
+├── .dockerignore
 ├── docs/                            # 文档目录
 └── README.md
 ```
@@ -179,14 +192,20 @@ z-agent/
 
 ```ini
 APP_NAME=极同学
-APP_ENV=development
+APP_ENV=development              # development / production
 HOST=0.0.0.0
 PORT=8000
 DEEPSEEK_API_KEY=sk-your-key-here
-CORS_ORIGINS=["http://localhost:5173"]
+CORS_ORIGINS=["http://localhost:5173"]   # 开发模式前端地址
+STATIC_DIR=static                # 前端静态文件目录
 ```
 
-### 前端 (.env)
+> 开发时 `CORS_ORIGINS` 填前端 dev server 地址；生产模式同源服务时可留空数组。
+
+### 前端
+
+生产模式下 WebSocket 自动使用 `location.host` 同源连接，无需配置。
+开发环境可在 `frontend/.env` 中设置：
 
 ```ini
 VITE_API_BASE_URL=http://localhost:8000
@@ -217,6 +236,54 @@ npm run preview                  # 预览生产构建
 
 - 后端：遵循 PEP 8，使用 Python 3.11+ 类型注解
 - 前端：TypeScript strict 模式，ES2020 目标
+
+## 部署
+
+### 方式一：直接部署（单进程）
+
+```bash
+# 1. 构建前端
+./scripts/build.sh
+
+# 2. 启动
+cd backend
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### 方式二：Docker 部署
+
+```bash
+# 1. 构建镜像
+docker build -t z-agent .
+
+# 2. 运行
+docker run -d \
+  --name z-agent \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -v /path/to/.env:/app/.env \
+  -v /path/to/data:/app/data \
+  -v ~/Library/Application\ Support/zspace:/root/.local/share/zspace \
+  -e ZSPACE_HOST=http://host.docker.internal:13579 \
+  --add-host host.docker.internal:host-gateway \
+  z-agent
+```
+
+**参数说明**：
+
+| 参数 | 说明 |
+|------|------|
+| `-p 8000:8000` | 宿主机端口映射 |
+| `-v .env:/app/.env` | 注入 DeepSeek Key 等配置 |
+| `-v data:/app/data` | 持久化会话数据 |
+| `-v zspace:/root/.local/share/zspace` | 透传 zspace 桌面客户端凭据 |
+| `-e ZSPACE_HOST` | 指定宿主机 zspace 代理地址 |
+| `--add-host` | Linux 下解析 host.docker.internal |
+
+> **跨平台构建**：在 M1/M2 Mac 上构建 x86 镜像：
+> ```bash
+> docker buildx build --platform linux/amd64,linux/arm64 -t z-agent .
+> ```
 
 ## 许可证
 
