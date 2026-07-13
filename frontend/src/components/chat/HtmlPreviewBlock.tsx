@@ -69,7 +69,7 @@ export default memo(function HtmlPreviewBlock({ htmlPreview, collapsed, blockId,
           <iframe
             srcDoc={wrappedHtml}
             title={title}
-            sandbox="allow-scripts allow-same-origin"
+            sandbox="allow-scripts"
             width="100%"
             height={height || 400}
             className="border-0"

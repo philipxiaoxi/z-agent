@@ -66,7 +66,15 @@ export default function ChatPage() {
     }
   }, [editingWorkdir]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  function isNearBottom() {
+    const el = scrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+  }
+
   const scrollKey = useMemo(() => {
     const len = messages.length;
     if (len === 0) return "0";
@@ -77,8 +85,9 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [scrollKey]);
+    if (!isNearBottom()) return;
+    bottomRef.current?.scrollIntoView({ behavior: loading ? "auto" : "smooth" });
+  }, [scrollKey, loading]);
 
   useEffect(() => {
     function handleFillInput(e: Event) {
@@ -163,7 +172,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-8 flex flex-col items-center">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-8 flex flex-col items-center">
         <div className="w-full flex flex-col gap-5" style={{ maxWidth: CHAT_MAX_WIDTH }}>
           {showWelcome && emptyState}
           {messagesLoading && messages.length === 0 && (
