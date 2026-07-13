@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Spin } from "antd";
@@ -9,7 +9,7 @@ import {
   RightOutlined,
   BulbOutlined,
 } from "@ant-design/icons";
-import type { Block } from "../../stores/chat-store";
+import type { Block, FileListData, HtmlPreviewData } from "../../stores/chat-store";
 import { useChatStore } from "../../stores/chat-store";
 import FileListBlock from "./FileListBlock";
 import HtmlPreviewBlock from "./HtmlPreviewBlock";
@@ -24,6 +24,47 @@ const STATUS_META = {
 
 export { STATUS_META };
 export type StatusKey = keyof typeof STATUS_META;
+
+type Segment =
+  | { type: "markdown"; content: string }
+  | { type: "file-list"; data: FileListData }
+  | { type: "html-preview"; data: HtmlPreviewData };
+
+function parseTagBlocks(content: string): Segment[] {
+  const segments: Segment[] = [];
+  const regex = /```z-([\w-]+)\s*\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: "markdown", content: content.slice(lastIndex, match.index) });
+    }
+
+    const name = match[1];
+    const jsonStr = match[2].trim();
+    try {
+      const data = JSON.parse(jsonStr);
+      if (name === "file-list") {
+        segments.push({ type: "file-list", data });
+      } else if (name === "html-preview") {
+        segments.push({ type: "html-preview", data });
+      } else {
+        segments.push({ type: "markdown", content: match[0] });
+      }
+    } catch {
+      segments.push({ type: "markdown", content: match[0] });
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({ type: "markdown", content: content.slice(lastIndex) });
+  }
+
+  return segments;
+}
 
 const ToolCallBlock = memo(function ToolCallBlock({ block }: { block: Block }) {
   const toggle = useChatStore((s) => s.toggleBlockCollapsed);
@@ -86,16 +127,65 @@ const ThinkingBlock = memo(function ThinkingBlock({ block }: { block: Block }) {
   );
 });
 
-const TextBlock = memo(function TextBlock({ block }: { block: Block }) {
+const TextBlock = memo(function TextBlock({ block, onFileAction }: { block: Block; onFileAction?: (action: "analyze" | "view" | "add_to_input", path: string) => void }) {
   if (!block.content) {
     return <Spin size="small" />;
   }
 
+  const segments = parseTagBlocks(block.content);
+  const [tagCollapsed, setTagCollapsed] = useState<Record<number, boolean>>({});
+
+  const toggleTag = useCallback((idx: number) => {
+    setTagCollapsed((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  }, []);
+
+  if (segments.length === 1 && segments[0].type === "markdown") {
+    return (
+      <div className="markdown-body">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {segments[0].content}
+        </ReactMarkdown>
+      </div>
+    );
+  }
+
   return (
-    <div className="markdown-body">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-        {block.content}
-      </ReactMarkdown>
+    <div className="flex flex-col gap-2">
+      {segments.map((seg, i) => {
+        if (seg.type === "markdown") {
+          return (
+            <div key={i} className="markdown-body">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {seg.content}
+              </ReactMarkdown>
+            </div>
+          );
+        }
+        if (seg.type === "file-list") {
+          return (
+            <FileListBlock
+              key={i}
+              fileList={seg.data}
+              collapsed={tagCollapsed[i] ?? false}
+              blockId={`ztag-${i}`}
+              onFileAction={onFileAction}
+              onToggle={() => toggleTag(i)}
+            />
+          );
+        }
+        if (seg.type === "html-preview") {
+          return (
+            <HtmlPreviewBlock
+              key={i}
+              htmlPreview={seg.data}
+              collapsed={tagCollapsed[i] ?? true}
+              blockId={`ztag-${i}`}
+              onToggle={() => toggleTag(i)}
+            />
+          );
+        }
+        return null;
+      })}
     </div>
   );
 });
@@ -113,24 +203,7 @@ export default memo(function BlockView({ block, onFileAction }: BlockViewProps) 
       return <ToolCallBlock block={block} />;
     case "tool_result":
       return <ToolResultBlock block={block} />;
-    case "file_list":
-      return (
-        <FileListBlock
-          fileList={block.fileList!}
-          collapsed={block.collapsed}
-          blockId={block.id}
-          onFileAction={onFileAction}
-        />
-      );
-    case "html_preview":
-      return (
-        <HtmlPreviewBlock
-          htmlPreview={block.htmlPreview!}
-          collapsed={block.collapsed}
-          blockId={block.id}
-        />
-      );
     default:
-      return <TextBlock block={block} />;
+      return <TextBlock block={block} onFileAction={onFileAction} />;
   }
 });
