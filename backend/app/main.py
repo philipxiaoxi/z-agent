@@ -1,8 +1,10 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.api import api_router
@@ -35,6 +37,14 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 
 
-@app.get("/")
-def root():
-    return {"message": f"{settings.APP_NAME} is running"}
+class SPAStaticFiles(StaticFiles):
+    def lookup_path(self, path: str) -> tuple[str, os.stat_result | None]:
+        full_path, stat_result = super().lookup_path(path)
+        if stat_result is None:
+            return super().lookup_path("index.html")
+        return full_path, stat_result
+
+
+static_dir = os.path.join(os.path.dirname(__file__), "..", settings.STATIC_DIR)
+if os.path.isdir(static_dir):
+    app.mount("/", SPAStaticFiles(directory=static_dir, html=True), name="static")

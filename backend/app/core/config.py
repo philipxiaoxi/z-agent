@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
+    STATIC_DIR: str = "static"
+
     DEEPSEEK_API_KEY: str = ""
 
 

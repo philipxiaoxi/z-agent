@@ -22,3 +22,6 @@ dist/
 # Session data
 data/sessions/
 backend/data/
+
+# Build output
+static/

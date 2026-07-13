@@ -1,4 +1,4 @@
-const RAW_BASE = import.meta.env.VITE_API_BASE_URL ?? "localhost:8000";
+const RAW_BASE = import.meta.env.VITE_API_BASE_URL || location.host;
 const WS_BASE = RAW_BASE.replace(/^https?:\/\//, "");
 
 export interface ToolCallEvent {
