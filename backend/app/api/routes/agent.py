@@ -41,11 +41,6 @@ async def agent_ws(ws: WebSocket):
         tools = await get_tools(
             confirm_mgr, workdir_ctx=ctx,
             on_workdir_changed=_on_workdir_changed,
-            send_to_frontend=lambda d: (
-                segments.append({"type": d["type"], "data": d["data"]})
-                if d.get("type") in ("file_list", "html_preview") else None,
-                asyncio.ensure_future(_send(ws, d)),
-            ),
         )
         logger.info("agent tools: %s", [t.name for t in tools])
     except Exception as e:
@@ -239,7 +234,7 @@ async def agent_ws(ws: WebSocket):
                 if thinking_buf:
                     _append_thinking_segment()
 
-                if session_id and (full_response or any(s["type"] in ("tool_call", "tool_result", "file_list", "html_preview", "thinking") for s in segments)):
+                if session_id and (full_response or any(s["type"] in ("tool_call", "tool_result", "thinking") for s in segments)):
                     # 合并连续文本片段
                     merged: list[dict] = []
                     for seg in segments:
@@ -262,10 +257,7 @@ async def agent_ws(ws: WebSocket):
                             blocks.append({"id": str(uuid4()), "type": "tool_call", "tool": seg["tool"], "args": seg["args"], "collapsed": True})
                         elif seg["type"] == "tool_result":
                             blocks.append({"id": str(uuid4()), "type": "tool_result", "tool": seg["tool"], "result": seg["result"], "collapsed": True})
-                        elif seg["type"] == "file_list":
-                            blocks.append({"id": str(uuid4()), "type": "file_list", "fileList": seg["data"], "collapsed": False})
-                        elif seg["type"] == "html_preview":
-                            blocks.append({"id": str(uuid4()), "type": "html_preview", "htmlPreview": seg.get("data", {}), "collapsed": True})
+
                     if thinking_content:
                         blocks.insert(0, {"id": str(uuid4()), "type": "thinking", "content": thinking_content, "collapsed": False})
 
