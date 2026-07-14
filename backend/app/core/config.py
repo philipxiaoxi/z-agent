@@ -21,5 +21,9 @@ class Settings(BaseSettings):
 
     MCP_SERVERS_CONFIG: str = ""
 
+    SANDBOX_IMAGE: str = "ghcr.io/agent-infra/sandbox:latest"
+    SANDBOX_API_KEY: str = ""
+    SANDBOX_HOST_PORT_RANGE: str = "18080-18090"
+
 
 settings = Settings()
