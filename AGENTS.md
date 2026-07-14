@@ -1,11 +1,12 @@
 # z-agent (极同学)
 
-NAS AI 管理助手，前后端分离结构，通过 MCP 协议调用 z-cli 操作 zspace 私有云。
+NAS AI 管理助手，前后端分离结构，通过 MCP 协议调用 z-cli 操作 zspace 私有云，同时支持 Docker sandbox 隔离执行环境。
 
 ## 架构
 
 ```
 React UI (Vite SPA) ←WebSocket+REST→ FastAPI + Agno + DeepSeek V4 Flash ←MCP→ z-cli → zspace NAS
+                                                                     └─Docker SDK→ AIO Sandbox 容器
 ```
 
 - **后端**: `backend/` — Python 3.11+, FastAPI, Agno, uv
@@ -16,7 +17,7 @@ React UI (Vite SPA) ←WebSocket+REST→ FastAPI + Agno + DeepSeek V4 Flash ←M
 
 ```bash
 # 后端（backend/ 下）
-uv sync                        # 安装依赖
+uv sync                        # 安装依赖（含 docker + httpx）
 uv sync --group dev            # 包含 pytest/httpx（当前无测试）
 uv run uvicorn app.main:app --reload --port 8000 --reload-dir app
 
@@ -40,9 +41,10 @@ npm run preview                # 预览构建产物
 - **工具组成**:
   - **MCP server**（配置驱动）：`backend/mcp_servers.yaml` 中声明，支持 stdio / SSE / Streamable HTTP 三种 transport
     - `zcli` — 13 个 NAS 管理工具
-  - **本地工具**：`set_workdir`（NAS 文件操作的工作目录设置）
+  - **本地工具**：`set_workdir`（NAS 文件操作的工作目录设置）+ `sandbox_*`（Docker 沙箱操作，通过动态 MCP 注册连接到 AIO Sandbox 原生 Hub）
+- **动态 MCP 注册**：`MCPRegistry.connect_dynamic()` 支持运行时动态连接 Streamable HTTP MCP server
 - **路径门禁**: 可在 `mcp_servers.yaml` 中对每个 MCP server 独立开启（`path_gate: true`）。开启后越界时异步请求前端用户确认
-- **非路径确认**: 可在 `mcp_servers.yaml` 中为工具指定 `confirm_tools`，调用时发确认请求
+- **非路径确认**: 可在 `mcp_servers.yaml` 中为工具指定 `confirm_tools`（如 `create_container`），调用时发确认请求
 - **MCP Registry**（`backend/app/core/mcp/`）：统一管理多个 MCPTools 实例的生命周期，配置驱动，新增 server 只需改 yaml
 - **提示词系统**: `backend/app/core/prompt/docs/role.md` + `system-instructions.md`，启动时加载
   - 反幻觉设计：所有文件操作必须走工具，禁止 AI 编造文件状态
@@ -61,5 +63,5 @@ npm run preview                # 预览构建产物
 - 无 CI/CD 配置
 - 无测试文件
 - 无需 lint/format 命令（项目无 ruff/mypy 等配置，前端 lint 内置于 `npm run build` 的 `tsc -b` 中）
-- 依赖外部 `z-cli`（命令行工具）+ DeepSeek API Key + zspace 桌面客户端
+- 依赖外部 `z-cli`（命令行工具）+ DeepSeek API Key + zspace 桌面客户端 + Docker Desktop（macOS）/ Docker CE
 - 会话数据 untracked（`data/sessions/` 在 `.gitignore` 中）

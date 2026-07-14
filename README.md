@@ -59,6 +59,10 @@ z-agent 是一个基于 AI 的 NAS（网络附加存储）管理助手，代号"
 - DeepSeek API Key
 - zspace 桌面客户端（已登录）
 
+Sandbox 容器需要：
+- Docker Desktop (macOS) / Docker CE (Linux)
+- 手动拉取镜像：`docker pull ghcr.io/agent-infra/sandbox:latest`
+
 ### 开发模式（前后端分离）
 
 ```bash
@@ -113,11 +117,12 @@ z-agent/
 │   │       │   └── docs/            # 角色定义 & 系统指令
 │   │       ├── mcp/                 # MCP Registry（多 server 管理）
 │   │       │   ├── config.py        # YAML 配置加载
-│   │       │   ├── registry.py      # MCPTools 生命周期管理
+│   │       │   ├── registry.py      # MCPTools 生命周期管理 + 动态注册
 │   │       │   └── wrapper.py       # 通用路径门禁 + 工具确认
 │   │       └── tools/
 │   │           ├── confirm.py           # 用户确认管理
-│   │           └── set_workdir.py       # 工作目录设置
+│   │           ├── set_workdir.py       # 工作目录设置
+│   │           └── sandbox_tools.py      # Sandbox 动态注册 + 代理调用
 │   ├── static/                      # 前端构建产物（已 gitignore）
 │   ├── mcp_servers.yaml              # MCP server 配置
 │   ├── pyproject.toml
@@ -158,12 +163,12 @@ z-agent/
 │  (Vite SPA) │     stream+JSON    │  + Agno + DeepSeek│             │ (NAS OS)│
 └─────────────┘                    └──────────────────┘             └─────────┘
        │                                    │
-       │  file_list 事件                     │  路径门禁确认
-       │  (可视化文件浏览器)                   │  (异步用户确认)
+       │  z-* 标签渲染                      │  Docker SDK
+       │  (z-file-list / z-html-preview)    │  + agent-sandbox
        ▼                                    ▼
 ┌─────────────────────┐         ┌──────────────────────┐
-│  FileListBlock.tsx   │         │  ConfirmManager       │
-│  网格缩略图/文件图标   │         │  + ZcliMCPWrapper    │
+│  BlockView.tsx       │         │  AIO Sandbox 容器    │
+│  前端组件标签系统     │         │  shell/file/browser  │
 └─────────────────────┘         └──────────────────────┘
 ```
 
@@ -172,8 +177,8 @@ z-agent/
 1. **用户输入** → WebSocket → FastAPI `agent_ws` 路由
 2. **AI 推理** → Agno 构建 LLM 历史 → 调用 DeepSeek API
 3. **流式输出** → 文本块实时推送前端
-4. **工具调用** → `tool_start` 事件 → MCP 工具执行 → 路径门禁检查 → `tool_result`
-5. **文件可视化** → `show_directory` 工具触发 `file_list` 事件 → 前端渲染文件浏览器
+4. **工具调用** → `tool_start` 事件 → MCP 工具 / Sandbox 工具执行 → 路径门禁检查 → `tool_result`
+5. **前端组件** → AI 回复中输出 ````z-*```` 标签 → 前端 `BlockView` 解析并渲染交互式 UI
 6. **持久化** → 每轮对话后保存 LLM 历史 + 展示 blocks 到会话文件
 
 ## API 概览
@@ -200,6 +205,14 @@ PORT=8000
 DEEPSEEK_API_KEY=sk-your-key-here
 CORS_ORIGINS=["http://localhost:5173"]   # 开发模式前端地址
 STATIC_DIR=static                # 前端静态文件目录
+
+# MCP 配置
+MCP_SERVERS_CONFIG=              # MCP server 配置 YAML 路径
+
+# Docker Sandbox
+SANDBOX_IMAGE=ghcr.io/agent-infra/sandbox:latest
+SANDBOX_API_KEY=                 # AIO Sandbox API 鉴权密钥
+SANDBOX_HOST_PORT_RANGE=18080-18090
 ```
 
 > 开发时 `CORS_ORIGINS` 填前端 dev server 地址；生产模式同源服务时可留空数组。
