@@ -9,7 +9,7 @@ export interface ToolCallEvent {
 
 export interface RequireConfirmEvent extends ToolCallEvent {
   question: string;
-  confirm_type?: string;
+  title?: string;
   path?: string;
   workdir?: string;
 }
@@ -56,7 +56,7 @@ type ServerEvent =
   | { type: "thinking"; content: string }
   | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
   | { type: "tool_result"; id: string; tool: string; result: string }
-  | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string; confirm_type?: string; path?: string; workdir?: string }
+  | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string; title?: string; path?: string; workdir?: string }
   | { type: "workdir_changed"; path: string }
   | { type: "done" }
   | { type: "error"; content: string };
@@ -107,7 +107,7 @@ export function createChatWs(events: WsEvents): ChatWs {
             events.onToolResult({ id: data.id, tool: data.tool, result: data.result });
             break;
           case "require_confirm":
-            events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question, confirm_type: data.confirm_type, path: data.path, workdir: data.workdir });
+            events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question, title: data.title, path: data.path, workdir: data.workdir });
             break;
           case "workdir_changed":
             events.onWorkdirChanged(data.path);

@@ -29,7 +29,7 @@ async def agent_ws(ws: WebSocket):
     transport = WebSocketTransport(ws)
     ctx = ConversationContext()
 
-    confirm_mgr = ConfirmManager(lambda d: asyncio.ensure_future(transport.emit(d)))
+    confirm_mgr = ConfirmManager(lambda data: asyncio.create_task(transport.emit(data)))
 
     async def _on_workdir_changed(path: str) -> None:
         ctx.workdir = path

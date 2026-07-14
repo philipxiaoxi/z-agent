@@ -14,7 +14,6 @@ class ServerConfig:
     transport: Literal["stdio", "sse", "streamable-http"] = "stdio"
     enabled: bool = True
     path_gate: bool = False
-    confirm_tools: dict[str, str] = field(default_factory=dict)
 
     command: str | None = None
     args: list[str] = field(default_factory=list)
@@ -24,19 +23,11 @@ class ServerConfig:
 
     @classmethod
     def from_dict(cls, name: str, d: dict) -> "ServerConfig":
-        raw_confirm = d.get("confirm_tools", {})
-        confirm_tools = {}
-        if isinstance(raw_confirm, dict):
-            confirm_tools = {str(k): str(v) for k, v in raw_confirm.items()}
-        elif isinstance(raw_confirm, list):
-            confirm_tools = {str(item): f"sandbox_{item}" for item in raw_confirm}
-
         return cls(
             name=name,
             transport=d.get("transport", "stdio"),
             enabled=d.get("enabled", True),
             path_gate=d.get("path_gate", False),
-            confirm_tools=confirm_tools,
             command=d.get("command"),
             args=d.get("args", []),
             url=d.get("url"),

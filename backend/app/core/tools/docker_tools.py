@@ -34,10 +34,10 @@ def make_docker_tools(confirm_mgr: ConfirmManager) -> list[Function]:
 
         cid, future = confirm_mgr.request({
             "type": "require_confirm",
-            "confirm_type": "docker_create",
+            "title": "创建容器",
             "tool": "create_container",
             "image": "ghcr.io/agent-infra/sandbox",
-            "question": "AI 想创建 AIO Sandbox 容器，是否放行？",
+            "question": "极同学想创建 AIO Sandbox 容器，是否放行？",
         })
         approved = await future
         confirm_mgr.cleanup(cid)
@@ -110,9 +110,9 @@ def make_docker_tools(confirm_mgr: ConfirmManager) -> list[Function]:
             return err
 
         cid, future = confirm_mgr.request({
-            "type": "require_confirm", "confirm_type": "docker_pull",
+            "type": "require_confirm", "title": "拉取镜像",
             "tool": "pull_image", "image": image,
-            "question": f"AI 想拉取 Docker 镜像 [{image}]，是否放行？",
+            "question": f"极同学想拉取 Docker 镜像 [{image}]，是否放行？",
         })
         approved = await future
         confirm_mgr.cleanup(cid)
@@ -144,9 +144,9 @@ def make_docker_tools(confirm_mgr: ConfirmManager) -> list[Function]:
             return err
 
         cid, future = confirm_mgr.request({
-            "type": "require_confirm", "confirm_type": "docker_stop",
+            "type": "require_confirm", "title": "停止容器",
             "tool": "stop_container", "container_id": container_id,
-            "question": f"AI 想停止并删除容器 [{container_id[:12]}]，是否放行？",
+            "question": f"极同学想停止并删除容器 [{container_id[:12]}]，是否放行？",
         })
         approved = await future
         confirm_mgr.cleanup(cid)

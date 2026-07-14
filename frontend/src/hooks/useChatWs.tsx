@@ -35,9 +35,8 @@ export function useChatWs() {
         addToolResult(data.tool, data.result);
       },
       onRequireConfirm(data: RequireConfirmEvent) {
-        const isPathGate = data.confirm_type === "path_gate";
         Modal.confirm({
-          title: isPathGate ? "路径门禁" : "需要确认",
+          title: data.title ?? "需要确认",
           icon: <ToolOutlined />,
           content: data.question,
           okText: "允许",

@@ -6,11 +6,12 @@ from typing import Any, Callable
 from agno.tools.function import Function
 from agno.tools.mcp import MCPTools
 
+from ..tools.confirm import ConfirmManager
 from .config import ServerConfig
 
 logger = logging.getLogger(__name__)
 
-PATH_ARGS = {"path", "file_path", "source", "destination", "src", "dst"}
+PATH_ARGS = {"path", "paths", "file_path", "source", "destination", "src", "dst"}
 
 
 class MCPWrapper:
@@ -58,12 +59,6 @@ class MCPWrapper:
             if result is not None:
                 return result
 
-        confirm_type = cfg.confirm_tools.get(name)
-        if confirm_type:
-            result = await self._check_tool_confirm(name, kwargs, confirm_type)
-            if result is not None:
-                return result
-
         return None
 
     async def _check_path_gate(self, name: str, kwargs: dict) -> str | None:
@@ -77,7 +72,7 @@ class MCPWrapper:
         logger.info("gate triggered: tool=%s path=%s %s", name, path, reason)
         cid, future = self._confirm.request({
             "type": "require_confirm",
-            "confirm_type": "path_gate",
+            "title": "路径门禁",
             "tool": name,
             "path": path,
             "workdir": wd,
@@ -89,29 +84,16 @@ class MCPWrapper:
             return f"❌ 操作已拒绝：{reason}"
         return None
 
-    async def _check_tool_confirm(self, name: str, kwargs: dict, confirm_type: str) -> str | None:
-        question = _build_confirm_question(name, kwargs, confirm_type)
-        cid, future = self._confirm.request({
-            "type": "require_confirm",
-            "confirm_type": confirm_type,
-            "tool": name,
-            **kwargs,
-            "question": question,
-        })
-        approved = await future
-        self._confirm.cleanup(cid)
-        if not approved:
-            return "❌ 用户拒绝了操作"
-        return None
-
-
 def _extract_path(kwargs: dict) -> str | None:
     for key in PATH_ARGS:
         val = kwargs.get(key)
         if isinstance(val, str) and val.startswith("/"):
             return val
+        if isinstance(val, list):
+            for item in val:
+                if isinstance(item, str) and item.startswith("/"):
+                    return item
     return None
 
 
-def _build_confirm_question(name: str, kwargs: dict, confirm_type: str) -> str:
-    return f"AI 想调用 [{name}]，是否放行？"
+

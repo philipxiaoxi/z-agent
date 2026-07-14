@@ -15,10 +15,10 @@ def make_set_workdir_tool(confirm_mgr: ConfirmManager,
     async def set_workdir(path: str) -> str:
         cid, future = confirm_mgr.request({
             "type": "require_confirm",
-            "confirm_type": "set_workdir",
+            "title": "设置工作目录",
             "tool": "set_workdir",
             "path": path,
-            "question": f"AI 想将工作目录设为 [{path}]，是否同意？",
+            "question": f"极同学想将工作目录设为 [{path}]，是否同意？",
         })
 
         approved = await future

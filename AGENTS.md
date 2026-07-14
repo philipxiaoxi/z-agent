@@ -56,6 +56,7 @@ npm run preview                # 预览构建产物
 
 - **后端**: PEP 8, Python 3.11+ 类型注解, async/await
 - **前端**: TypeScript strict 模式, ES2020 target, 函数组件 + Hooks, Zustand 状态管理
+- **命名可读性**: 禁止单字母/缩写命名（`d`, `x`, `v` 等），lambda 临时解构和数学公式除外；使用完整有语义的名称
 - **提交规范**: Conventional Commits (`feat:/fix:/refactor:/docs:/chore:/style:`)，中文描述，行 ≤ 72 字符
 
 ## 边界
