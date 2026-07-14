@@ -19,5 +19,7 @@ class Settings(BaseSettings):
 
     STORE_THINKING_IN_CONTEXT: bool = True
 
+    MCP_SERVERS_CONFIG: str = ""
+
 
 settings = Settings()

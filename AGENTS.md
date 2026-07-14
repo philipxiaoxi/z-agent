@@ -18,7 +18,7 @@ React UI (Vite SPA) ←WebSocket+REST→ FastAPI + Agno + DeepSeek V4 Flash ←M
 # 后端（backend/ 下）
 uv sync                        # 安装依赖
 uv sync --group dev            # 包含 pytest/httpx（当前无测试）
-uv run uvicorn app.main:app --reload --port 8000 --reload-exclude '.venv/**'
+uv run uvicorn app.main:app --reload --port 8000 --reload-dir app
 
 # 前端（frontend/ 下）
 npm install
@@ -37,12 +37,17 @@ npm run preview                # 预览构建产物
 - **WebSocket 主通道**: `ws://localhost:8000/api/agent/ws` — AI 对话的核心路由（`backend/app/api/routes/agent.py`）
 - **流式输出**: Agno `arun(stream=True, stream_events=True)` 实时推送文本 + 工具事件到前端
 - **会话持久化**: JSON 文件 `data/sessions/{id}.json`，包含 `messages`（展示用 blocks）和 `llm_history`（LLM 对话历史）
-- **路径门禁**: 所有 MCP 工具调用前检查路径是否在工作目录内，越界时异步请求前端用户确认
+- **工具组成**:
+  - **MCP server**（配置驱动）：`backend/mcp_servers.yaml` 中声明，支持 stdio / SSE / Streamable HTTP 三种 transport
+    - `zcli` — 13 个 NAS 管理工具
+  - **本地工具**：`set_workdir`（NAS 文件操作的工作目录设置）
+- **路径门禁**: 可在 `mcp_servers.yaml` 中对每个 MCP server 独立开启（`path_gate: true`）。开启后越界时异步请求前端用户确认
+- **非路径确认**: 可在 `mcp_servers.yaml` 中为工具指定 `confirm_tools`，调用时发确认请求
+- **MCP Registry**（`backend/app/core/mcp/`）：统一管理多个 MCPTools 实例的生命周期，配置驱动，新增 server 只需改 yaml
 - **提示词系统**: `backend/app/core/prompt/docs/role.md` + `system-instructions.md`，启动时加载
   - 反幻觉设计：所有文件操作必须走工具，禁止 AI 编造文件状态
-  - 铁律：list_files → show_directory 必须成对调用
-- **工具组成**: zcli MCP 工具（zspace-cli_list_files 等）+ 3 个本地工具（set_workdir, show_directory, show_html_preview）
-- **配置文件**: `backend/.env`（示例见 `backend/.env.example`）
+  - 铁律：list_files 后必须输出 z-file-list 组件
+- **配置文件**: `backend/.env`（示例见 `backend/.env.example`）+ `backend/mcp_servers.yaml`
 - **开发代理**: Vite dev server 自动代理 `/api` 到 `localhost:8000`
 
 ## 代码约定

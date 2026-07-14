@@ -39,6 +39,7 @@ async def agent_ws(ws: WebSocket):
         tools = await get_tools(
             confirm_mgr, workdir_ctx=ctx,
             on_workdir_changed=_on_workdir_changed,
+            session_id=ctx.session_id,
         )
         logger.info("agent tools: %s", [t.name for t in tools])
     except Exception as e:

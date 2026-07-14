@@ -15,13 +15,23 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.core.tools.zcli_mcp_wrapper import get_zcli_mcp
-    try:
-        mcp = await get_zcli_mcp()
-        logger.info("zcli MCP connected, tools: %s", list(mcp.functions.keys()))
-    except Exception as e:
-        logger.warning("zcli MCP not available: %s", e)
+    from app.core.mcp import load_mcp_config, get_registry
+
+    registry = get_registry()
+    configs = load_mcp_config(settings.MCP_SERVERS_CONFIG or None)
+
+    for cfg in configs:
+        if not cfg.enabled:
+            continue
+        try:
+            mcp = await registry.get(cfg)
+            logger.info("MCP [%s] connected: %d tools", cfg.name, len(mcp.functions))
+        except Exception as e:
+            logger.warning("MCP [%s] not available: %s", cfg.name, e)
+
     yield
+
+    await registry.close_all()
 
 
 app = FastAPI(title=settings.APP_NAME, version="0.1.0", lifespan=lifespan)

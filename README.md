@@ -67,7 +67,7 @@ cd backend
 uv sync
 cp .env.example .env
 # 编辑 .env，填入 DEEPSEEK_API_KEY
-uv run uvicorn app.main:app --reload --reload-exclude '.venv/**'   # → http://localhost:8000
+uv run uvicorn app.main:app --reload --port 8000 --reload-dir app   # → http://localhost:8000
 
 # 2. 前端（新终端）
 cd frontend
@@ -111,13 +111,15 @@ z-agent/
 │   │       ├── prompt/
 │   │       │   ├── prompts.py       # 提示词加载
 │   │       │   └── docs/            # 角色定义 & 系统指令
+│   │       ├── mcp/                 # MCP Registry（多 server 管理）
+│   │       │   ├── config.py        # YAML 配置加载
+│   │       │   ├── registry.py      # MCPTools 生命周期管理
+│   │       │   └── wrapper.py       # 通用路径门禁 + 工具确认
 │   │       └── tools/
 │   │           ├── confirm.py           # 用户确认管理
-│   │           ├── zcli_mcp_wrapper.py  # MCP 工具包装+路径门禁
-│   │           ├── show_directory.py    # 文件浏览器推送
-│   │           ├── show_html_preview.py # HTML 交互页面渲染
 │   │           └── set_workdir.py       # 工作目录设置
 │   ├── static/                      # 前端构建产物（已 gitignore）
+│   ├── mcp_servers.yaml              # MCP server 配置
 │   ├── pyproject.toml
 │   ├── .env.example
 │   └── .gitignore
@@ -219,7 +221,7 @@ VITE_API_BASE_URL=http://localhost:8000
 cd backend
 uv sync                          # 安装依赖
 uv sync --group dev              # 安装开发依赖（pytest, httpx）
-uv run uvicorn app.main:app --reload --port 8000 --reload-exclude '.venv/**'
+uv run uvicorn app.main:app --reload --port 8000 --reload-dir app
 ```
 
 ### 前端开发

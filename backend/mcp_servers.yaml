@@ -1,0 +1,7 @@
+servers:
+  zcli:
+    transport: stdio
+    command: zcli
+    args: ["mcp"]
+    enabled: true
+    path_gate: true
