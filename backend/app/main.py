@@ -33,6 +33,9 @@ async def lifespan(app: FastAPI):
 
     await registry.close_all()
 
+    from app.core.tools.docker_tools import cleanup_leftover_containers
+    cleanup_leftover_containers()
+
 
 app = FastAPI(title=settings.APP_NAME, version="0.1.0", lifespan=lifespan)
 

@@ -9,6 +9,8 @@ from app.core.mcp import load_mcp_config, get_registry, MCPWrapper
 from app.core.config import settings
 from .confirm import ConfirmManager
 from .set_workdir import make_set_workdir_tool
+from .docker_tools import make_docker_tools
+from .sandbox_tools import make_sandbox_tools
 
 
 async def get_tools(
@@ -42,6 +44,8 @@ async def get_tools(
             await on_workdir_changed(path)
 
     local_tools.append(make_set_workdir_tool(confirm_mgr, on_workdir_changed=_on_set_workdir))
+    local_tools.extend(make_docker_tools(confirm_mgr))
+    local_tools.extend(make_sandbox_tools())
 
     logger.info("get_tools: %d mcp + %d local = %d tools",
                 len(all_tools), len(local_tools), len(all_tools) + len(local_tools))
