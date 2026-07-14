@@ -127,6 +127,16 @@ const ThinkingBlock = memo(function ThinkingBlock({ block }: { block: Block }) {
   );
 });
 
+const CancelledBlock = memo(function CancelledBlock() {
+  return (
+    <div className="flex items-center gap-2 py-2 text-gray-400 text-sm select-none">
+      <span className="flex-1 h-px bg-gray-200" />
+      <span>⛔ 对话已终止</span>
+      <span className="flex-1 h-px bg-gray-200" />
+    </div>
+  );
+});
+
 const TextBlock = memo(function TextBlock({ block, onFileAction }: { block: Block; onFileAction?: (action: "analyze" | "view" | "add_to_input", path: string) => void }) {
   if (!block.content) {
     return <Spin size="small" />;
@@ -203,6 +213,8 @@ export default memo(function BlockView({ block, onFileAction }: BlockViewProps) 
       return <ToolCallBlock block={block} />;
     case "tool_result":
       return <ToolResultBlock block={block} />;
+    case "cancelled":
+      return <CancelledBlock />;
     default:
       return <TextBlock block={block} onFileAction={onFileAction} />;
   }

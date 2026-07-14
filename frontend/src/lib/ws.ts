@@ -30,6 +30,7 @@ export interface WsEvents {
   onToolResult: (data: ToolResultEvent) => void;
   onRequireConfirm: (data: RequireConfirmEvent) => void;
   onWorkdirChanged: (path: string) => void;
+  onCancelled: () => void;
   onDone: () => void;
   onError: (content: string) => void;
 }
@@ -37,6 +38,7 @@ export interface WsEvents {
 export interface ChatWs {
   sendMessage: (text: string, sessionId?: string) => void;
   sendConfirm: (id: string, approved: boolean) => void;
+  sendCancelRun: () => void;
   sendSetWorkdir: (path: string) => void;
   sendSetSession: (sessionId: string) => void;
   reconnect: () => void;
@@ -58,6 +60,7 @@ type ServerEvent =
   | { type: "tool_result"; id: string; tool: string; result: string }
   | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string; title?: string; path?: string; workdir?: string }
   | { type: "workdir_changed"; path: string }
+  | { type: "cancelled" }
   | { type: "done" }
   | { type: "error"; content: string };
 
@@ -112,6 +115,9 @@ export function createChatWs(events: WsEvents): ChatWs {
           case "workdir_changed":
             events.onWorkdirChanged(data.path);
             break;
+          case "cancelled":
+            events.onCancelled();
+            break;
           case "done":
             events.onDone();
             break;
@@ -145,6 +151,9 @@ export function createChatWs(events: WsEvents): ChatWs {
     },
     sendConfirm(id: string, approved: boolean) {
       sendOrQueue(ws, { type: "confirm", id, approved });
+    },
+    sendCancelRun() {
+      sendOrQueue(ws, { type: "cancel_run" });
     },
     sendSetWorkdir(path: string) {
       sendOrQueue(ws, { type: "set_workdir", path });

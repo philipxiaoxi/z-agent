@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Modal } from "antd";
+import { Button, Modal } from "antd";
 import { ToolOutlined } from "@ant-design/icons";
 import {
   createChatWs,
@@ -11,7 +11,7 @@ import {
 import { useChatStore } from "../stores/chat-store";
 
 export function useChatWs() {
-  const { appendText, appendThinking, addToolCall, addToolResult, setWorkdir, activeSessionId } = useChatStore();
+  const { appendText, appendThinking, addToolCall, addToolResult, markCancelled, setWorkdir, activeSessionId } = useChatStore();
   const [loading, setLoading] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const wsRef = useRef<ChatWs | null>(null);
@@ -35,15 +35,22 @@ export function useChatWs() {
         addToolResult(data.tool, data.result);
       },
       onRequireConfirm(data: RequireConfirmEvent) {
-        Modal.confirm({
+        const modal = Modal.confirm({
           title: data.title ?? "需要确认",
           icon: <ToolOutlined />,
           content: data.question,
-          okText: "允许",
-          cancelText: "拒绝",
-          onOk: () => ws.sendConfirm(data.id, true),
-          onCancel: () => ws.sendConfirm(data.id, false),
+          footer: () => (
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <Button danger onClick={() => { ws.sendCancelRun(); modal.destroy(); }}>终止</Button>
+              <Button onClick={() => { ws.sendConfirm(data.id, false); modal.destroy(); }}>拒绝</Button>
+              <Button type="primary" onClick={() => { ws.sendConfirm(data.id, true); modal.destroy(); }}>允许</Button>
+            </div>
+          ),
         });
+      },
+      onCancelled() {
+        markCancelled();
+        setLoading(false);
       },
       onWorkdirChanged(path: string) {
         setWorkdir(path);
@@ -58,7 +65,7 @@ export function useChatWs() {
     });
     wsRef.current = ws;
     return () => ws.close();
-  }, [appendText, appendThinking, addToolCall, addToolResult, setWorkdir]);
+  }, [appendText, appendThinking, addToolCall, addToolResult, markCancelled, setWorkdir]);
 
   useEffect(() => {
     wsRef.current?.sendSetSession(activeSessionId ?? "");
@@ -80,6 +87,10 @@ export function useChatWs() {
     wsRef.current?.reconnect();
   }, []);
 
+  const handleCancelRun = useCallback(() => {
+    wsRef.current?.sendCancelRun();
+  }, []);
+
   return {
     wsStatus,
     loading,
@@ -87,5 +98,6 @@ export function useChatWs() {
     handleSend,
     handleSetWorkdir,
     handleReconnect,
+    handleCancelRun,
   };
 }

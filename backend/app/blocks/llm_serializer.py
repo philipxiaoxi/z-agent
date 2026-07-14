@@ -57,6 +57,8 @@ def serialize_llm_messages(segments: list[dict], store_thinking: bool) -> list[d
                 "content": seg["result"],
                 "name": seg["tool"],
             })
+        elif seg["type"] == "cancelled":
+            llm_msgs.append({"role": "system", "content": "用户终止了上一轮 AI 回复，后续对话基于已有上下文继续。"})
 
     if pending_text.strip():
         msg = {"role": "assistant", "content": pending_text.strip()}

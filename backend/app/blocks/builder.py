@@ -53,6 +53,13 @@ def build_blocks(segments: list[dict]) -> list[dict]:
                 "result": seg["result"],
                 "collapsed": True,
             })
+        elif seg["type"] == "cancelled":
+            blocks.append({
+                "id": str(uuid4()),
+                "type": "cancelled",
+                "content": seg.get("content", "对话已终止"),
+                "collapsed": False,
+            })
 
     if thinking_content:
         blocks.insert(0, {

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type BlockType = "text" | "tool_call" | "tool_result" | "thinking";
+export type BlockType = "text" | "tool_call" | "tool_result" | "thinking" | "cancelled";
 
 export interface FileItem {
   name: string;
@@ -67,6 +67,7 @@ interface ChatState {
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
   appendThinking: (chunk: string) => void;
+  markCancelled: () => void;
   toggleBlockCollapsed: (blockId: string) => void;
 
   workdir: string;
@@ -283,6 +284,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: [
           ...s.messages.slice(0, -1),
           { ...last, blocks },
+        ],
+      };
+    }),
+
+  markCancelled: () =>
+    set((s) => {
+      if (!s.messages.length) return s;
+      const last = s.messages[s.messages.length - 1]!;
+      return {
+        messages: [
+          ...s.messages.slice(0, -1),
+          {
+            ...last,
+            blocks: [
+              ...last.blocks,
+              { id: crypto.randomUUID(), type: "cancelled" as BlockType, content: "对话已终止", collapsed: false },
+            ],
+          },
         ],
       };
     }),

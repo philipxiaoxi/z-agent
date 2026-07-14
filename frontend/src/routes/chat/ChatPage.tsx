@@ -24,7 +24,7 @@ interface PoolOption {
 
 export default function ChatPage() {
   const { messages, workdir, messagesLoading, addMessage, setWorkdir } = useChatStore();
-  const { wsStatus, loading, setLoading, handleSend, handleSetWorkdir, handleReconnect } = useChatWs();
+  const { wsStatus, loading, setLoading, handleSend, handleSetWorkdir, handleReconnect, handleCancelRun } = useChatWs();
   const [input, setInput] = useState("");
   const [pools, setPools] = useState<PoolOption[]>([]);
 
@@ -282,9 +282,15 @@ export default function ChatPage() {
               disabled={loading}
               className="rounded-[10px] text-sm px-3 py-2"
             />
-            <Button type="primary" icon={<SendOutlined />} onClick={onSend} loading={loading} className="rounded-[10px] h-[38px] px-[18px] flex items-center">
-              发送
-            </Button>
+            {loading ? (
+              <Button danger icon={<CloseCircleOutlined />} onClick={handleCancelRun} className="rounded-[10px] h-[38px] px-[18px] flex items-center">
+                终止
+              </Button>
+            ) : (
+              <Button type="primary" icon={<SendOutlined />} onClick={onSend} className="rounded-[10px] h-[38px] px-[18px] flex items-center">
+                发送
+              </Button>
+            )}
           </div>
         </div>
       </div>

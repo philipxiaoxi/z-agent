@@ -30,6 +30,38 @@ def _agent_event_to_msg(ev: AgentEvent) -> dict | None:
     return None
 
 
+def _accumulate_segment(segments: list[dict], kind: str, data: dict) -> None:
+    if kind in ("text", "thinking"):
+        content = data["content"]
+        if segments and segments[-1]["type"] == kind:
+            segments[-1]["content"] += content
+        else:
+            segments.append({"type": kind, "content": content})
+    elif kind == "tool_start":
+        segments.append({"type": "tool_call", "tool": data["tool"], "args": data["args"]})
+    elif kind == "tool_result":
+        segments.append({"type": "tool_result", "tool": data["tool"], "result": data["result"]})
+
+
+def _strip_orphan_tool_calls(segments: list[dict]) -> list[dict]:
+    result: list[dict] = []
+    pending: list[dict] = []
+    for seg in segments:
+        if seg["type"] == "tool_call":
+            pending.append(seg)
+        elif seg["type"] == "tool_result":
+            if pending:
+                result.append(pending.pop(0))
+                result.append(seg)
+        elif seg["type"] == "text":
+            result.extend(pending)
+            pending.clear()
+            result.append(seg)
+        else:
+            result.append(seg)
+    return result
+
+
 class ConversationOrchestrator:
     def __init__(
         self,
@@ -66,6 +98,9 @@ class ConversationOrchestrator:
                 msg_type = data.get("type")
                 if msg_type == "confirm":
                     self._confirm.resolve(data["id"], data.get("approved", False))
+                elif msg_type == "cancel_run":
+                    self._confirm.cancel_run()
+                    logger.info("user cancelled the current run")
                 elif msg_type in ("set_workdir", "restore_workdir"):
                     self._ctx.workdir = data.get("path", "")
                     await self._transport.emit({"type": "workdir_changed", "path": self._ctx.workdir})
@@ -103,27 +138,45 @@ class ConversationOrchestrator:
 
         store_thinking = settings.STORE_THINKING_IN_CONTEXT
         segments: list[dict] = []
-        full_response = ""
+        cancelled = False
 
-        async for ev in self._runner.run(self._ctx.get_history(), self._ctx.session_id):
-            if ev.kind == "done":
-                segments = ev.data["segments"]
-                full_response = ev.data["full_response"]
-            else:
+        run_gen = self._runner.run(self._ctx.get_history(), self._ctx.session_id)
+        try:
+            async for ev in run_gen:
+                if self._confirm.is_cancelled():
+                    self._confirm.reset_cancel()
+                    cancelled = True
+                    break
+                if ev.kind == "done":
+                    continue
                 msg = _agent_event_to_msg(ev)
                 if msg:
                     await self._transport.emit(msg)
+                    _accumulate_segment(segments, ev.kind, ev.data)
+        finally:
+            await run_gen.aclose()
 
-        if session_id and (full_response or any(s["type"] in ("tool_call", "tool_result", "thinking") for s in segments)):
-            llm_msgs = serialize_llm_messages(segments, store_thinking)
+        save_segments = None
+        ctx_to_append = None
 
-            if llm_msgs:
-                self._ctx.append_messages(llm_msgs)
+        if cancelled:
+            save_segments = _strip_orphan_tool_calls(segments)
+            save_segments.append({"type": "cancelled", "content": "对话已终止"})
+            ctx_to_append = [{"role": "system", "content": "用户终止了上一轮 AI 回复，后续对话基于已有上下文继续。"}]
+            await self._transport.emit({"type": "cancelled"})
+        elif segments:
+            has_substance = any(s["type"] in ("tool_call", "tool_result", "thinking") or s.get("content", "").strip() for s in segments)
+            if has_substance:
+                save_segments = merge_segments(segments)
+                ctx_to_append = serialize_llm_messages(segments, store_thinking)
 
+        if save_segments is not None and session_id:
+            if ctx_to_append:
+                self._ctx.append_messages(ctx_to_append)
             self._sessions.save(self._ctx.session_id,
                 messages=[
                     {"id": str(uuid4()), "role": "user", "content": user_content},
-                    {"id": str(uuid4()), "role": "assistant", "segments": merge_segments(segments)},
+                    {"id": str(uuid4()), "role": "assistant", "segments": save_segments},
                 ])
 
         await self._transport.emit({"type": "done"})
