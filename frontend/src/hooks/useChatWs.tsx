@@ -7,11 +7,14 @@ import {
   type WsStatus,
   type ToolResultEvent,
   type RequireConfirmEvent,
+  type SubagentStartEvent,
+  type SubagentStepEvent,
+  type SubagentEndEvent,
 } from "../lib/ws";
 import { useChatStore } from "../stores/chat-store";
 
 export function useChatWs() {
-  const { appendText, appendThinking, addToolCall, addToolResult, markCancelled, setWorkdir, activeSessionId } = useChatStore();
+  const { appendText, appendThinking, addToolCall, addToolResult, addSubagentStart, addSubagentStep, addSubagentEnd, markCancelled, setWorkdir, activeSessionId } = useChatStore();
   const [loading, setLoading] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
   const wsRef = useRef<ChatWs | null>(null);
@@ -48,6 +51,21 @@ export function useChatWs() {
           ),
         });
       },
+      onSubagentStart(data: SubagentStartEvent) {
+        addSubagentStart(data.id, data.task);
+      },
+      onSubagentStep(data: SubagentStepEvent) {
+        addSubagentStep(data.id, {
+          step_type: data.step_type,
+          content: data.content,
+          tool: data.tool,
+          args: data.args,
+          result: data.result,
+        });
+      },
+      onSubagentEnd(data: SubagentEndEvent) {
+        addSubagentEnd(data.id, data.result);
+      },
       onCancelled() {
         markCancelled();
         setLoading(false);
@@ -65,7 +83,7 @@ export function useChatWs() {
     });
     wsRef.current = ws;
     return () => ws.close();
-  }, [appendText, appendThinking, addToolCall, addToolResult, markCancelled, setWorkdir]);
+  }, [appendText, appendThinking, addToolCall, addToolResult, addSubagentStart, addSubagentStep, addSubagentEnd, markCancelled, setWorkdir]);
 
   useEffect(() => {
     wsRef.current?.sendSetSession(activeSessionId ?? "");

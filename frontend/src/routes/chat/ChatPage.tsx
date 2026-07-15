@@ -81,7 +81,8 @@ export default function ChatPage() {
     const last = messages[len - 1];
     const blocks = last.blocks;
     const lastBlock = blocks[blocks.length - 1];
-    return `${len}-${blocks.length}-${lastBlock?.content?.length ?? 0}-${lastBlock?.result?.length ?? 0}`;
+    const lastStep = lastBlock?.steps?.[lastBlock.steps.length - 1];
+    return `${len}-${blocks.length}-${lastBlock?.content?.length ?? 0}-${lastBlock?.result?.length ?? 0}-${lastBlock?.steps?.length ?? 0}-${lastStep?.content?.length ?? 0}-${lastStep?.result?.length ?? 0}`;
   }, [messages]);
 
   useEffect(() => {

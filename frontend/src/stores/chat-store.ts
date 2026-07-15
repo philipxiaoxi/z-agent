@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type BlockType = "text" | "tool_call" | "tool_result" | "thinking" | "cancelled";
+export type BlockType = "text" | "tool_call" | "tool_result" | "thinking" | "cancelled" | "subagent";
 
 export interface FileItem {
   name: string;
@@ -22,6 +22,16 @@ export interface HtmlPreviewData {
   height: number;
 }
 
+export type SubagentStepType = "text" | "thinking" | "tool_start" | "tool_result" | "error";
+
+export interface SubagentStep {
+  step_type: SubagentStepType;
+  content?: string;
+  tool?: string;
+  args?: Record<string, unknown>;
+  result?: string;
+}
+
 export interface Block {
   id: string;
   type: BlockType;
@@ -30,6 +40,9 @@ export interface Block {
   args?: Record<string, unknown>;
   result?: string;
   collapsed: boolean;
+  task?: string;
+  steps?: SubagentStep[];
+  done?: boolean;
 }
 
 export interface Message {
@@ -67,6 +80,9 @@ interface ChatState {
   addToolCall: (tool: string, args: Record<string, unknown>) => void;
   addToolResult: (tool: string, result: string) => void;
   appendThinking: (chunk: string) => void;
+  addSubagentStart: (id: string, task: string) => void;
+  addSubagentStep: (id: string, step: SubagentStep) => void;
+  addSubagentEnd: (id: string, result: string) => void;
   markCancelled: () => void;
   toggleBlockCollapsed: (blockId: string) => void;
 
@@ -303,6 +319,57 @@ export const useChatStore = create<ChatState>((set, get) => ({
             ],
           },
         ],
+      };
+    }),
+
+  addSubagentStart: (id, task) =>
+    set((s) =>
+      withNewBlock(s, {
+        id,
+        type: "subagent" as BlockType,
+        task,
+        steps: [],
+        result: "",
+        done: false,
+        collapsed: true,
+      })
+    ),
+
+  addSubagentStep: (id, step) =>
+    set((s) => {
+      if (!s.messages.length) return s;
+      const last = s.messages[s.messages.length - 1]!;
+      const blocks = last.blocks.map((b) => {
+        if (b.id !== id || b.type !== "subagent") return b;
+        const steps = [...(b.steps ?? [])];
+        if (step.step_type === "text" || step.step_type === "thinking") {
+          if (steps.length > 0 && steps[steps.length - 1].step_type === step.step_type) {
+            const prev = steps[steps.length - 1];
+            steps[steps.length - 1] = { ...prev, content: (prev.content ?? "") + (step.content ?? "") };
+          } else {
+            steps.push({ ...step });
+          }
+        } else {
+          steps.push({ ...step });
+        }
+        return { ...b, steps };
+      });
+      return {
+        messages: [...s.messages.slice(0, -1), { ...last, blocks }],
+      };
+    }),
+
+  addSubagentEnd: (id, result) =>
+    set((s) => {
+      if (!s.messages.length) return s;
+      const last = s.messages[s.messages.length - 1]!;
+      const blocks = last.blocks.map((b) =>
+        b.id === id && b.type === "subagent"
+          ? { ...b, result, done: true }
+          : b
+      );
+      return {
+        messages: [...s.messages.slice(0, -1), { ...last, blocks }],
       };
     }),
 

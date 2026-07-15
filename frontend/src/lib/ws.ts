@@ -20,6 +20,28 @@ export interface ToolResultEvent {
   result: string;
 }
 
+export type SubagentStepType = "text" | "thinking" | "tool_start" | "tool_result" | "error";
+
+export interface SubagentStepEvent {
+  id: string;
+  step_type: SubagentStepType;
+  content?: string;
+  tool?: string;
+  args?: Record<string, unknown>;
+  result?: string;
+}
+
+export interface SubagentStartEvent {
+  id: string;
+  task: string;
+}
+
+export interface SubagentEndEvent {
+  id: string;
+  result: string;
+  error?: boolean;
+}
+
 export type WsStatus = "connecting" | "connected" | "disconnected";
 
 export interface WsEvents {
@@ -29,6 +51,9 @@ export interface WsEvents {
   onToolStart: (data: ToolCallEvent) => void;
   onToolResult: (data: ToolResultEvent) => void;
   onRequireConfirm: (data: RequireConfirmEvent) => void;
+  onSubagentStart: (data: SubagentStartEvent) => void;
+  onSubagentStep: (data: SubagentStepEvent) => void;
+  onSubagentEnd: (data: SubagentEndEvent) => void;
   onWorkdirChanged: (path: string) => void;
   onCancelled: () => void;
   onDone: () => void;
@@ -59,6 +84,9 @@ type ServerEvent =
   | { type: "tool_start"; id: string; tool: string; args: Record<string, unknown> }
   | { type: "tool_result"; id: string; tool: string; result: string }
   | { type: "require_confirm"; id: string; tool: string; args: Record<string, unknown>; question: string; title?: string; path?: string; workdir?: string }
+  | { type: "subagent_start"; id: string; task: string }
+  | { type: "subagent_step"; id: string; step_type: SubagentStepType; content?: string; tool?: string; args?: Record<string, unknown>; result?: string }
+  | { type: "subagent_end"; id: string; result: string; error?: boolean }
   | { type: "workdir_changed"; path: string }
   | { type: "cancelled" }
   | { type: "done" }
@@ -111,6 +139,15 @@ export function createChatWs(events: WsEvents): ChatWs {
             break;
           case "require_confirm":
             events.onRequireConfirm({ id: data.id, tool: data.tool, args: data.args, question: data.question, title: data.title, path: data.path, workdir: data.workdir });
+            break;
+          case "subagent_start":
+            events.onSubagentStart({ id: data.id, task: data.task });
+            break;
+          case "subagent_step":
+            events.onSubagentStep({ id: data.id, step_type: data.step_type, content: data.content, tool: data.tool, args: data.args, result: data.result });
+            break;
+          case "subagent_end":
+            events.onSubagentEnd({ id: data.id, result: data.result, error: data.error });
             break;
           case "workdir_changed":
             events.onWorkdirChanged(data.path);

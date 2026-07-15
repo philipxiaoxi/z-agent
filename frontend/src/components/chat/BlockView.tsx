@@ -13,6 +13,7 @@ import type { Block, FileListData, HtmlPreviewData } from "../../stores/chat-sto
 import { useChatStore } from "../../stores/chat-store";
 import FileListBlock from "./FileListBlock";
 import HtmlPreviewBlock from "./HtmlPreviewBlock";
+import SubagentBlock from "./SubagentBlock";
 
 const CODE_FONT = '"SF Mono", "Monaco", "Cascadia Code", monospace';
 
@@ -215,6 +216,8 @@ export default memo(function BlockView({ block, onFileAction }: BlockViewProps) 
       return <ToolResultBlock block={block} />;
     case "cancelled":
       return <CancelledBlock />;
+    case "subagent":
+      return <SubagentBlock block={block} />;
     default:
       return <TextBlock block={block} onFileAction={onFileAction} />;
   }
