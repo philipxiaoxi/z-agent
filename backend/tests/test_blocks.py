@@ -98,6 +98,43 @@ class TestBuildBlocks:
         assert len(blocks) == 1
         assert blocks[0]["content"] == "HelloWorld"
 
+    def test_subagent_block(self):
+        segments = [{
+            "type": "subagent",
+            "id": "sub1",
+            "task": "统计文件",
+            "steps": [{"step_type": "text", "content": "子agent思考"}],
+            "result": "共5个文件",
+            "done": True,
+        }]
+        blocks = build_blocks(segments)
+        assert len(blocks) == 1
+        b = blocks[0]
+        assert b["type"] == "subagent"
+        assert b["task"] == "统计文件"
+        assert b["steps"] == [{"step_type": "text", "content": "子agent思考"}]
+        assert b["result"] == "共5个文件"
+        assert b["done"] is True
+        assert b["collapsed"] is True
+
+    def test_subagent_block_defaults_done_true(self):
+        segments = [{"type": "subagent", "id": "sub1", "task": "t", "steps": [], "result": "", "done": False}]
+        blocks = build_blocks(segments)
+        # done 缺失时默认 True（防止重载时卡在"运行中"）
+        assert blocks[0]["done"] is False
+
+    def test_subagent_block_with_surrounding_text(self):
+        segments = [
+            {"type": "text", "content": "我来派发"},
+            {"type": "subagent", "id": "s", "task": "任务", "steps": [], "result": "ok", "done": True},
+            {"type": "text", "content": "完成"},
+        ]
+        blocks = build_blocks(segments)
+        assert len(blocks) == 3
+        assert blocks[0]["type"] == "text"
+        assert blocks[1]["type"] == "subagent"
+        assert blocks[2]["type"] == "text"
+
 
 class TestSerializeLlmMessages:
     def test_pure_text(self):
@@ -175,3 +212,67 @@ class TestSerializeLlmMessages:
         assert len(msgs) == 3
         assert msgs[2]["role"] == "assistant"
         assert msgs[2]["content"] == "Done"
+
+    def test_subagent_serializes_to_tool_call_result_pair(self):
+        segments = [{
+            "type": "subagent",
+            "id": "sub1",
+            "task": "统计文件",
+            "steps": [{"step_type": "text", "content": "子agent思考"}],
+            "result": "共5个文件",
+            "done": True,
+        }]
+        msgs = serialize_llm_messages(segments, store_thinking=False)
+        assert len(msgs) == 2
+        # tool_call
+        assert msgs[0]["role"] == "assistant"
+        assert msgs[0]["content"] is None
+        assert len(msgs[0]["tool_calls"]) == 1
+        call = msgs[0]["tool_calls"][0]
+        assert call["function"]["name"] == "dispatch_subagent"
+        assert '"统计文件"' in call["function"]["arguments"]
+        # tool_result
+        assert msgs[1]["role"] == "tool"
+        assert msgs[1]["content"] == "共5个文件"
+        assert msgs[1]["name"] == "dispatch_subagent"
+
+    def test_subagent_with_surrounding_text(self):
+        segments = [
+            {"type": "text", "content": "我来派发"},
+            {"type": "subagent", "id": "s", "task": "任务", "steps": [], "result": "ok", "done": True},
+            {"type": "text", "content": "完成"},
+        ]
+        msgs = serialize_llm_messages(segments, store_thinking=False)
+        assert len(msgs) == 4
+        assert msgs[0]["role"] == "assistant"
+        assert msgs[0]["content"] == "我来派发"
+        assert msgs[1]["content"] is None  # tool_call
+        assert msgs[2]["role"] == "tool"  # tool_result
+        assert msgs[3]["role"] == "assistant"
+        assert msgs[3]["content"] == "完成"
+
+    def test_subagent_empty_result(self):
+        segments = [{"type": "subagent", "id": "s", "task": "t", "steps": [], "result": "", "done": True}]
+        msgs = serialize_llm_messages(segments, store_thinking=False)
+        assert len(msgs) == 2
+        assert msgs[1]["content"] == ""
+
+    def test_subagent_steps_not_in_llm_history(self):
+        """子 agent 的中间步骤（steps）不应出现在 LLM 历史中。"""
+        segments = [{
+            "type": "subagent",
+            "id": "sub1",
+            "task": "任务",
+            "steps": [
+                {"step_type": "text", "content": "子agent的内部文本"},
+                {"step_type": "tool_start", "tool": "list_files", "args": {}},
+                {"step_type": "tool_result", "tool": "list_files", "result": "内部结果"},
+            ],
+            "result": "最终返回",
+            "done": True,
+        }]
+        msgs = serialize_llm_messages(segments, store_thinking=False)
+        full_text = str(msgs)
+        assert "子agent的内部文本" not in full_text
+        assert "内部结果" not in full_text
+        assert "最终返回" in full_text
