@@ -60,6 +60,16 @@ def build_blocks(segments: list[dict]) -> list[dict]:
                 "content": seg.get("content", "对话已终止"),
                 "collapsed": False,
             })
+        elif seg["type"] == "subagent":
+            blocks.append({
+                "id": str(uuid4()),
+                "type": "subagent",
+                "task": seg.get("task", ""),
+                "steps": seg.get("steps", []),
+                "result": seg.get("result", ""),
+                "done": seg.get("done", True),
+                "collapsed": True,
+            })
 
     if thinking_content:
         blocks.insert(0, {

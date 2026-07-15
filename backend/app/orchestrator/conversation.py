@@ -4,6 +4,7 @@ import asyncio
 import logging
 from uuid import uuid4
 
+from app.agent.dispatch import SubAgentDispatchContext
 from app.agent.events import AgentEvent
 from app.agent.runner import AgentRunner
 from app.blocks import merge_segments, serialize_llm_messages
@@ -70,12 +71,14 @@ class ConversationOrchestrator:
         ctx: ConversationContext,
         confirm_mgr: ConfirmManager,
         sessions: SessionManager,
+        dispatch_ctx: SubAgentDispatchContext,
     ) -> None:
         self._transport = transport
         self._runner = runner
         self._ctx = ctx
         self._confirm = confirm_mgr
         self._sessions = sessions
+        self._dispatch_ctx = dispatch_ctx
         self._msg_queue: asyncio.Queue[dict] = asyncio.Queue()
 
     async def serve(self) -> None:
@@ -149,6 +152,26 @@ class ConversationOrchestrator:
                     break
                 if ev.kind == "done":
                     continue
+
+                # 拦截 dispatch_subagent 事件，路由到 subagent 流程
+                # subagent_start/end 由 dispatch_ctx._dispatch 统一 emit，
+                # 此处只管理 segment 生命周期（bind/unbind），避免重复 emit
+                if ev.kind == "tool_start" and ev.data.get("tool") == self._dispatch_ctx.tool_name:
+                    sub_id = ev.data["id"]
+                    task = ev.data["args"].get("task", "")
+                    segment = {
+                        "type": "subagent", "id": sub_id, "task": task,
+                        "steps": [], "result": "", "done": False,
+                    }
+                    segments.append(segment)
+                    self._dispatch_ctx.bind(sub_id, segment)
+                    continue
+
+                if ev.kind == "tool_result" and ev.data.get("tool") == self._dispatch_ctx.tool_name:
+                    sub_id = ev.data["id"]
+                    self._dispatch_ctx.unbind(sub_id)
+                    continue
+
                 msg = _agent_event_to_msg(ev)
                 if msg:
                     await self._transport.emit(msg)
@@ -161,6 +184,9 @@ class ConversationOrchestrator:
 
         if cancelled:
             save_segments = _strip_orphan_tool_calls(segments)
+            for seg in save_segments:
+                if seg.get("type") == "subagent":
+                    seg["done"] = True
             save_segments.append({"type": "cancelled", "content": "对话已终止"})
             ctx_to_append = [{"role": "system", "content": "用户终止了上一轮 AI 回复，后续对话基于已有上下文继续。"}]
             await self._transport.emit({"type": "cancelled"})
