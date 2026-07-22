@@ -18,6 +18,7 @@ async def get_tools(
     workdir_ctx: Any | None = None,
     on_workdir_changed: Callable[[str], None] | None = None,
     session_id: str = "",
+    dify_pool: Any | None = None,
 ) -> list[Function]:
     logger = logging.getLogger(__name__)
     all_tools: list[Function] = []
@@ -47,6 +48,20 @@ async def get_tools(
     local_tools.extend(make_docker_tools(confirm_mgr))
     local_tools.extend(make_sandbox_tools())
 
-    logger.info("get_tools: %d mcp + %d local = %d tools",
-                len(all_tools), len(local_tools), len(all_tools) + len(local_tools))
+    dify_tools: list[Function] = []
+    if dify_pool is not None:
+        dify_user = f"zagent-{session_id}" if session_id else "zagent-wf"
+        dify_tools = dify_pool.build_tools(user=dify_user, confirm_mgr=confirm_mgr)
+        all_tools.extend(dify_tools)
+        logger.info("Dify: %d workflow tools loaded (user=%s)", len(dify_tools), dify_user)
+
+    mcp_count = len(all_tools) - len(dify_tools)
+    total = mcp_count + len(local_tools) + len(dify_tools)
+    logger.info(
+        "get_tools: %d mcp + %d local + %d dify = %d tools",
+        mcp_count,
+        len(local_tools),
+        len(dify_tools),
+        total,
+    )
     return all_tools + local_tools

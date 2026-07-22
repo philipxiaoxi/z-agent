@@ -38,11 +38,14 @@ async def agent_ws(ws: WebSocket):
         ctx.workdir = path
         await transport.emit({"type": "workdir_changed", "path": path})
 
+    dify_pool = getattr(ws.app.state, "dify_pool", None)
+
     try:
         base_tools = await get_tools(
             confirm_mgr, workdir_ctx=ctx,
             on_workdir_changed=_on_workdir_changed,
             session_id=ctx.session_id,
+            dify_pool=dify_pool,
         )
         logger.info("agent tools: %s", [t.name for t in base_tools])
     except Exception as e:

@@ -29,9 +29,19 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("MCP [%s] not available: %s", cfg.name, e)
 
+    from app.core.dify.pool import DifyClientPool
+    dify_pool = DifyClientPool()
+    try:
+        await dify_pool.initialize(settings.DIFY_WORKFLOWS_CONFIG or None)
+        app.state.dify_pool = dify_pool
+    except Exception as e:
+        logger.warning("Dify workflows not available: %s", e)
+        app.state.dify_pool = dify_pool
+
     yield
 
     await registry.close_all()
+    await dify_pool.close()
 
     from app.core.tools.docker_tools import cleanup_leftover_containers
     cleanup_leftover_containers()

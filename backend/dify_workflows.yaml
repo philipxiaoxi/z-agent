@@ -1,0 +1,8 @@
+workflows:
+  image_analysis:
+    name: image_analysis
+    description: 用于对指定图片进行分析，支持图片内容识别、目标检测、场景理解等
+    api_base_url: https://dify.xiaotao2333.top:344/v1
+    api_key: ${DIFY_IMAGE_ANALYSIS_API_KEY}
+    enabled: true
+    max_execution_time: 60
