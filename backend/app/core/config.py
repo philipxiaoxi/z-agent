@@ -27,5 +27,7 @@ class Settings(BaseSettings):
     SANDBOX_API_KEY: str = ""
     SANDBOX_HOST_PORT_RANGE: str = "18080-18090"
 
+    AUTH_TOKEN: str = ""
+
 
 settings = Settings()

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, Progress, Statistic, Spin, Typography } from "antd";
+import { authFetch } from "../../lib/fetch";
 import {
   ThunderboltOutlined,
   DatabaseOutlined,
@@ -49,7 +50,7 @@ export default function WelcomeCard() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch("/api/pools/")
+    authFetch("/api/pools/")
       .then((res) => res.json())
       .then((data) => {
         if (data.pools && data.pools.length > 0) {

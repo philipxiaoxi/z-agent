@@ -13,6 +13,7 @@ import BlockView, { STATUS_META, type StatusKey } from "../../components/chat/Bl
 import WelcomeCard from "../../components/chat/WelcomeCard";
 import SessionSelect from "../../components/chat/SessionSelect";
 import { useChatWs } from "../../hooks/useChatWs";
+import { authFetch } from "../../lib/fetch";
 
 const { Text } = Typography;
 const CHAT_MAX_WIDTH = 720;
@@ -55,7 +56,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (editingWorkdir && pools.length === 0) {
-      fetch("/api/pools/")
+      authFetch("/api/pools/")
         .then((res) => res.json())
         .then((data) => {
           if (data.pools && data.pools.length > 0) {

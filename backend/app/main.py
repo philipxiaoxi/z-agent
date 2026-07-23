@@ -2,8 +2,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.staticfiles import StaticFiles
 
 from app.core.config import settings
@@ -56,6 +57,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if not settings.AUTH_TOKEN:
+        return await call_next(request)
+
+    path = request.url.path
+    if path == "/api/auth/status" or not path.startswith("/api/"):
+        return await call_next(request)
+
+    auth = request.headers.get("Authorization")
+    if not auth:
+        return JSONResponse(status_code=401, content={"detail": "缺少认证凭证"})
+    scheme, _, token = auth.partition(" ")
+    if scheme.lower() != "bearer" or token != settings.AUTH_TOKEN:
+        return JSONResponse(status_code=401, content={"detail": "认证凭证无效"})
+    return await call_next(request)
+
 
 app.include_router(api_router, prefix="/api")
 

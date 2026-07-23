@@ -94,7 +94,8 @@ type ServerEvent =
 
 export function createChatWs(events: WsEvents): ChatWs {
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-  const url = `${protocol}//${WS_BASE}/api/agent/ws`;
+  const token = (() => { try { return localStorage.getItem("zagent_auth_token") ?? ""; } catch { return ""; } })();
+  const url = `${protocol}//${WS_BASE}/api/agent/ws${token ? `?token=${encodeURIComponent(token)}` : ""}`;
   let ws: WebSocket;
 
   function safeClose() {
@@ -172,9 +173,13 @@ export function createChatWs(events: WsEvents): ChatWs {
       events.onError("WebSocket 连接失败");
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       events.onStatusChange("disconnected");
       events.onDone();
+      if (e.code === 4001) {
+        try { localStorage.removeItem("zagent_auth_token"); } catch {}
+        window.dispatchEvent(new CustomEvent("zspace:auth:unauthorized"));
+      }
     };
   }
 

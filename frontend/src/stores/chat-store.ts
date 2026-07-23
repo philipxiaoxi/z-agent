@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { authFetch } from "../lib/fetch";
 
 export type BlockType = "text" | "tool_call" | "tool_result" | "thinking" | "cancelled" | "subagent";
 
@@ -146,7 +147,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   fetchSessions: async () => {
     set({ sessionsLoading: true });
     try {
-      const res = await fetch("/api/sessions/");
+      const res = await authFetch("/api/sessions/");
       const data = await res.json();
       set({ sessions: data.sessions ?? [], sessionsLoading: false, storeReady: true });
     } catch {
@@ -163,7 +164,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   createSession: async () => {
     try {
-      const res = await fetch("/api/sessions/", {
+      const res = await authFetch("/api/sessions/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
@@ -178,7 +179,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   deleteSession: async (id: string) => {
     try {
-      await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+      await authFetch(`/api/sessions/${id}`, { method: "DELETE" });
       const { activeSessionId } = get();
       await get().fetchSessions();
       if (activeSessionId === id) {
@@ -196,7 +197,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   renameSession: async (id: string, name: string) => {
     try {
-      await fetch(`/api/sessions/${id}/name`, {
+      await authFetch(`/api/sessions/${id}/name`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
@@ -213,7 +214,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (id === get().activeSessionId) return;
     set({ messagesLoading: true });
     try {
-      const res = await fetch(`/api/sessions/${id}`);
+      const res = await authFetch(`/api/sessions/${id}`);
       const data = await res.json();
       set({
         activeSessionId: id,

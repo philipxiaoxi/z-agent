@@ -28,6 +28,11 @@ router = APIRouter()
 
 @router.websocket("/ws")
 async def agent_ws(ws: WebSocket):
+    if settings.AUTH_TOKEN:
+        token = ws.query_params.get("token", "")
+        if token != settings.AUTH_TOKEN:
+            await ws.close(code=4001, reason="unauthorized")
+            return
     await ws.accept()
     transport = WebSocketTransport(ws)
     ctx = ConversationContext()
