@@ -79,8 +79,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
             >
               <label className="block text-sm font-medium text-gray-700 mb-1.5">请输入访问凭证</label>
               <input
-                type="password"
-                autoComplete="current-password"
+                type="text"
+                autoComplete="off"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="输入凭证"
