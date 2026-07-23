@@ -238,6 +238,7 @@ export default function ChatPage() {
                 <FolderOutlined className="text-gray-400 text-sm shrink-0" />
                 <Input
                   size="small"
+                  autoComplete="off"
                   value={workdirInput}
                   onChange={(e) => setWorkdirInput(e.target.value)}
                   onKeyDown={onWorkdirKeyDown}
@@ -291,6 +292,7 @@ export default function ChatPage() {
               placeholder="输入消息，Enter 发送，Shift+Enter 换行"
               autoSize={{ minRows: 1, maxRows: 4 }}
               disabled={loading}
+              autoComplete="off"
               className="rounded-[10px] text-sm px-3 py-2"
             />
             {loading ? (

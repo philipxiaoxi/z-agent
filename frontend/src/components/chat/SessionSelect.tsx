@@ -88,6 +88,7 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
           return (
             <Input
               size="small"
+              autoComplete="off"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
@@ -111,6 +112,7 @@ export default function SessionSelect({ loading }: { loading: boolean }) {
         label: s.id === renamingId ? (
           <Input
             size="small"
+            autoComplete="off"
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={(e) => {
