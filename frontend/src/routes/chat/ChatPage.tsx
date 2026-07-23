@@ -155,15 +155,24 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-100">
-      <div className="px-6 py-3.5 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+      <div className="px-6 py-3.5 bg-white border-b border-gray-100 flex flex-wrap items-center justify-between gap-y-2 shrink-0 md:flex-nowrap md:gap-y-0">
         <div className="flex items-center gap-2">
           <ThunderboltOutlined className="text-lg" style={{ color: "#1677ff" }} />
           <Text strong className="text-[15px]">极同学</Text>
-          <span className="text-xs text-gray-400">你的 NAS AI 助手</span>
+          <span className="text-xs text-gray-400 hidden sm:inline">你的 NAS AI 助手</span>
         </div>
-        <div className="flex items-center gap-3">
+        {/* 移动端：状态指示与重连按钮，居于第一行右侧 */}
+        <div className="flex items-center gap-2 md:hidden">
+          <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: statusMeta?.color ?? "#ff4d4f" }} />
+          <Text className="text-xs text-gray-400">{statusMeta?.label ?? "未连接"}</Text>
+          {wsStatus === "disconnected" && (
+            <Button size="small" type="text" icon={<ReloadOutlined />} onClick={handleReconnect} className="text-xs text-gray-400" />
+          )}
+        </div>
+        <div className="header-controls flex items-center gap-3 w-full md:w-auto">
           <SessionSelect loading={loading} />
-          <div className="flex items-center gap-2">
+          {/* PC 端：状态指示与重连按钮留在右侧 */}
+          <div className="hidden md:flex items-center gap-2">
             <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: statusMeta?.color ?? "#ff4d4f" }} />
             <Text className="text-xs text-gray-400">{statusMeta?.label ?? "未连接"}</Text>
             {wsStatus === "disconnected" && (
@@ -173,7 +182,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-auto p-8 flex flex-col items-center">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-3 md:p-8 flex flex-col items-center">
         <div className="w-full flex flex-col gap-5" style={{ maxWidth: CHAT_MAX_WIDTH }}>
           {showWelcome && emptyState}
           {messagesLoading && messages.length === 0 && (

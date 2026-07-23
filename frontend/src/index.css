@@ -1,11 +1,39 @@
 @import "tailwindcss";
-@import "github-markdown-css/github-markdown.css";
+@import "github-markdown-css/github-markdown-light.css";
+
+/* iOS 移动端：禁止下拉刷新式橡皮筋、禁止手势缩放、禁止文本自动放大 */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  touch-action: manipulation;
+}
+
+/* 让 100vh 在 iOS 上贴合真实视口，避免地址栏抖动导致的拉起空白 */
+#root {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
 
 /* chat 气泡内适配 */
 .markdown-body {
   background-color: transparent;
   font-size: inherit;
   color: inherit;
+}
+
+/* SessionSelect 下拉框：移动端占满下一行剩余宽度 */
+@media (max-width: 768px) {
+  .session-select.ant-select {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
 }
 
 /* SessionSelect 下拉框 */
